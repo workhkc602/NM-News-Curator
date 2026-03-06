@@ -176,11 +176,7 @@ def summarize(entries: list[dict]) -> str:
 
     articles_text = ""
     for i, e in enumerate(entries, 1):
-        articles_text += (
-            f"\n{i}. [{e['source']}] {e['title']}"
-            f"\n   URL: {e['url']}"
-            f"\n   Summary: {e['summary'][:200]}\n"
-        )
+        articles_text += f"\n{i}. [{e['source']}] {e['title']} — {e['url']}"
 
     prompt = f"""You are an AI news editor. Compile the following articles into a concise daily digest.
 
