@@ -1,14 +1,16 @@
 """
-AI News Curator — Daily newsletter for content inspiration.
-Fetches AI news from RSS feeds, summarizes in Chinese via Groq, emails via Brevo.
+AI News Curator — Daily AI news digest delivered to your inbox.
+Fetches from RSS feeds, summarizes via Groq (free), emails via Brevo (free).
 Designed to run as a Railway cron job.
 """
 
 import os
 import json
 import logging
+import re
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
+from pathlib import Path
 
 import feedparser
 import httpx
@@ -16,48 +18,105 @@ import httpx
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Configuration (all from environment variables)
+# ---------------------------------------------------------------------------
+
 GROQ_API_KEY = os.environ["GROQ_API_KEY"]
 BREVO_API_KEY = os.environ["BREVO_API_KEY"]
-EMAIL_TO = os.environ.get("EMAIL_TO", "kristie@giftio.online")
-SENDER_EMAIL = os.environ.get("BREVO_SENDER_EMAIL", "noreply@giftio.online")
-SENDER_NAME = os.environ.get("BREVO_SENDER_NAME", "Giftio AI News")
+EMAIL_TO = os.environ.get("EMAIL_TO", "you@example.com")
+SENDER_EMAIL = os.environ.get("BREVO_SENDER_EMAIL", "noreply@example.com")
+SENDER_NAME = os.environ.get("BREVO_SENDER_NAME", "AI News")
 GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
 HOURS_LOOKBACK = int(os.environ.get("HOURS_LOOKBACK", "26"))
+LANGUAGE = os.environ.get("LANGUAGE", "zh-HK")
+SOURCES_FILE = os.environ.get("SOURCES_FILE", "sources.json")
 
 # ---------------------------------------------------------------------------
-# RSS Sources
+# Language presets
 # ---------------------------------------------------------------------------
 
-FEEDS = {
-    # --- Tech Media ---
-    "TechCrunch AI": "https://techcrunch.com/category/artificial-intelligence/feed/",
-    "The Verge AI": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml",
-    "Ars Technica AI": "https://feeds.arstechnica.com/arstechnica/technology-lab",
-    "MIT Tech Review AI": "https://www.technologyreview.com/feed/",
-    "VentureBeat AI": "https://venturebeat.com/category/ai/feed/",
-
-    # --- AI Company Blogs ---
-    "OpenAI Blog": "https://openai.com/blog/rss.xml",
-    "Anthropic News": "https://www.anthropic.com/rss.xml",
-    "Google AI Blog": "https://blog.google/technology/ai/rss/",
-    "Meta AI Blog": "https://ai.meta.com/blog/rss/",
-    "HuggingFace Blog": "https://huggingface.co/blog/feed.xml",
-
-    # --- YouTube Channels (via RSS) ---
-    "Matt Wolfe": "https://www.youtube.com/feeds/videos.xml?channel_id=UCJifBHSDVMR0wIJnMYkq2gg",
-    "AI Explained": "https://www.youtube.com/feeds/videos.xml?channel_id=UCNJ1Ymd5yFuUPtn21xtRbbw",
-    "Two Minute Papers": "https://www.youtube.com/feeds/videos.xml?channel_id=UCbfYPyITQ-7l4upoX8nvctg",
-    "Fireship": "https://www.youtube.com/feeds/videos.xml?channel_id=UCsBjURrPoezykLs9EqgamOA",
-    "TheAIGRID": "https://www.youtube.com/feeds/videos.xml?channel_id=UCJHnlbGcJSQQDoXHRjgB2qg",
+LANGUAGE_PRESETS = {
+    "zh-HK": {
+        "name": "香港書面中文",
+        "prompt": (
+            "用**香港書面中文**撰寫（繁體中文，不用簡體、不用大陸用語、不用台灣語氣）。"
+            "英文專有名詞保留原文。"
+        ),
+        "subject_template": "AI 日報 — {date}（{count} 則新聞）",
+        "empty_message": "今日暫無重大 AI 新聞。",
+    },
+    "zh-TW": {
+        "name": "繁體中文（台灣）",
+        "prompt": "用**繁體中文（台灣用語）**撰寫。英文專有名詞保留原文。",
+        "subject_template": "AI 日報 — {date}（{count} 則新聞）",
+        "empty_message": "今日暫無重大 AI 新聞。",
+    },
+    "zh-CN": {
+        "name": "简体中文",
+        "prompt": "用**简体中文**撰写。英文专有名词保留原文。",
+        "subject_template": "AI 日报 — {date}（{count} 条新闻）",
+        "empty_message": "今日暂无重大 AI 新闻。",
+    },
+    "en": {
+        "name": "English",
+        "prompt": "Write in **English**.",
+        "subject_template": "AI Daily — {date} ({count} articles)",
+        "empty_message": "No major AI news today.",
+    },
+    "ja": {
+        "name": "日本語",
+        "prompt": "**日本語**で書いてください。英語の専門用語はそのまま使ってください。",
+        "subject_template": "AI日報 — {date}（{count}件）",
+        "empty_message": "本日の主要AIニュースはありません。",
+    },
 }
 
 
+def get_lang_config() -> dict:
+    """Get language config from preset or fallback to custom prompt."""
+    if LANGUAGE in LANGUAGE_PRESETS:
+        return LANGUAGE_PRESETS[LANGUAGE]
+    # Treat LANGUAGE value as a custom language instruction
+    return {
+        "name": LANGUAGE,
+        "prompt": f"Write in {LANGUAGE}.",
+        "subject_template": "AI Daily — {date} ({count} articles)",
+        "empty_message": "No major AI news today.",
+    }
+
+
+# ---------------------------------------------------------------------------
+# Sources
+# ---------------------------------------------------------------------------
+
+def load_sources() -> dict[str, str]:
+    """Load RSS sources from JSON file."""
+    sources_path = Path(__file__).parent / SOURCES_FILE
+    if not sources_path.exists():
+        log.error(f"Sources file not found: {sources_path}")
+        return {}
+
+    with open(sources_path) as f:
+        sources = json.load(f)
+
+    return {s["name"]: s["url"] for s in sources}
+
+
+# ---------------------------------------------------------------------------
+# Core logic
+# ---------------------------------------------------------------------------
+
 def fetch_recent_entries(hours: int = HOURS_LOOKBACK) -> list[dict]:
     """Fetch RSS entries published within the last N hours."""
+    feeds = load_sources()
+    if not feeds:
+        return []
+
     cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
     entries = []
 
-    for source, url in FEEDS.items():
+    for source, url in feeds.items():
         try:
             feed = feedparser.parse(url)
             for entry in feed.entries:
@@ -93,28 +152,35 @@ def fetch_recent_entries(hours: int = HOURS_LOOKBACK) -> list[dict]:
 
 
 def summarize_with_groq(entries: list[dict]) -> str:
-    """Send entries to Groq for Chinese summarization."""
+    """Send entries to Groq for summarization."""
+    lang = get_lang_config()
+
     if not entries:
-        return "今日暫無重大 AI 新聞。"
+        return lang["empty_message"]
 
     articles_text = ""
     for i, e in enumerate(entries, 1):
-        articles_text += f"\n{i}. [{e['source']}] {e['title']}\n   URL: {e['url']}\n   摘要: {e['summary'][:200]}\n"
+        articles_text += (
+            f"\n{i}. [{e['source']}] {e['title']}"
+            f"\n   URL: {e['url']}"
+            f"\n   Summary: {e['summary'][:200]}\n"
+        )
 
-    prompt = f"""你是一位專注於 AI 領域的新聞編輯。請將以下今日 AI 新聞整理成一份簡潔的中文日報。
+    prompt = f"""You are an AI news editor. Compile the following articles into a concise daily digest.
 
-要求：
-1. 用**香港書面中文**撰寫（繁體，不用簡體、不用大陸用語、不用台灣語氣）
-2. 按重要性分類整理（重大發佈 > 產品更新 > 行業分析 > 教學資源）
-3. 每則新聞用 1-2 句話概述重點，附上原文連結
-4. 如有多則相關新聞，合併整理
-5. 最後加一段「今日重點」（3 bullet points 總結最值得關注的動態）
-6. YouTube 影片標註為「影片」方便辨識
+Language: {lang['prompt']}
 
-今日新聞（{len(entries)} 則）：
+Requirements:
+1. Start with a "Key Highlights" section — 3 bullet points summarizing the most important developments
+2. Then organize remaining news by importance (Major Releases > Product Updates > Industry Analysis > Tutorials)
+3. Summarize each item in 1-2 sentences with the source URL
+4. Merge related articles into a single entry
+5. Mark YouTube videos with a [Video] tag
+
+Today's articles ({len(entries)} total):
 {articles_text}
 
-請直接輸出整理後的日報內容，不需要額外解釋。"""
+Output the digest directly, no preamble."""
 
     resp = httpx.post(
         "https://api.groq.com/openai/v1/chat/completions",
@@ -130,6 +196,10 @@ def summarize_with_groq(entries: list[dict]) -> str:
     resp.raise_for_status()
     return resp.json()["choices"][0]["message"]["content"]
 
+
+# ---------------------------------------------------------------------------
+# Email
+# ---------------------------------------------------------------------------
 
 def send_email(subject: str, html_body: str):
     """Send newsletter via Brevo transactional email API."""
@@ -152,8 +222,7 @@ def send_email(subject: str, html_body: str):
 
 
 def markdown_to_html(md: str) -> str:
-    """Minimal markdown-to-HTML for email rendering."""
-    import re
+    """Convert markdown to simple HTML for email rendering."""
     lines = md.split("\n")
     html_lines = []
     in_list = False
@@ -167,14 +236,12 @@ def markdown_to_html(md: str) -> str:
             html_lines.append("<br>")
             continue
 
-        # Headers
         if stripped.startswith("### "):
             html_lines.append(f"<h3>{stripped[4:]}</h3>")
         elif stripped.startswith("## "):
             html_lines.append(f"<h2>{stripped[3:]}</h2>")
         elif stripped.startswith("# "):
             html_lines.append(f"<h1>{stripped[2:]}</h1>")
-        # List items
         elif stripped.startswith("- ") or stripped.startswith("* "):
             if not in_list:
                 html_lines.append("<ul>")
@@ -187,9 +254,7 @@ def markdown_to_html(md: str) -> str:
         html_lines.append("</ul>")
 
     html = "\n".join(html_lines)
-    # Convert markdown links to HTML
     html = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2">\1</a>', html)
-    # Bold
     html = re.sub(r'\*\*([^*]+)\*\*', r'<strong>\1</strong>', html)
 
     return f"""<div style="font-family: -apple-system, sans-serif; max-width: 640px;
@@ -197,15 +262,20 @@ def markdown_to_html(md: str) -> str:
     {html}
     <hr style="margin-top: 32px; border: none; border-top: 1px solid #ddd;">
     <p style="color: #999; font-size: 12px;">
-        Auto-generated by AI News Curator · {datetime.now().strftime('%Y-%m-%d %H:%M')} HKT
+        Auto-generated by AI News Curator · {datetime.now().strftime('%Y-%m-%d %H:%M')} UTC
     </p>
     </div>"""
 
 
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
 def main():
+    lang = get_lang_config()
     today = datetime.now(timezone(timedelta(hours=8)))  # HKT
     date_str = today.strftime("%Y-%m-%d")
-    log.info(f"=== AI News Curator — {date_str} ===")
+    log.info(f"=== AI News Curator — {date_str} ({lang['name']}) ===")
 
     entries = fetch_recent_entries()
 
@@ -216,7 +286,7 @@ def main():
     newsletter = summarize_with_groq(entries)
     log.info(f"Newsletter generated ({len(newsletter)} chars)")
 
-    subject = f"AI 日報 — {date_str}（{len(entries)} 則新聞）"
+    subject = lang["subject_template"].format(date=date_str, count=len(entries))
     html = markdown_to_html(newsletter)
     send_email(subject, html)
 

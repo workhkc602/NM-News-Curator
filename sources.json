@@ -1,0 +1,77 @@
+[
+  {
+    "name": "TechCrunch AI",
+    "url": "https://techcrunch.com/category/artificial-intelligence/feed/",
+    "category": "tech-media"
+  },
+  {
+    "name": "The Verge AI",
+    "url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml",
+    "category": "tech-media"
+  },
+  {
+    "name": "Ars Technica",
+    "url": "https://feeds.arstechnica.com/arstechnica/technology-lab",
+    "category": "tech-media"
+  },
+  {
+    "name": "MIT Tech Review",
+    "url": "https://www.technologyreview.com/feed/",
+    "category": "tech-media"
+  },
+  {
+    "name": "VentureBeat AI",
+    "url": "https://venturebeat.com/category/ai/feed/",
+    "category": "tech-media"
+  },
+  {
+    "name": "OpenAI Blog",
+    "url": "https://openai.com/blog/rss.xml",
+    "category": "ai-company"
+  },
+  {
+    "name": "Anthropic News",
+    "url": "https://www.anthropic.com/rss.xml",
+    "category": "ai-company"
+  },
+  {
+    "name": "Google AI Blog",
+    "url": "https://blog.google/technology/ai/rss/",
+    "category": "ai-company"
+  },
+  {
+    "name": "Meta AI Blog",
+    "url": "https://ai.meta.com/blog/rss/",
+    "category": "ai-company"
+  },
+  {
+    "name": "HuggingFace Blog",
+    "url": "https://huggingface.co/blog/feed.xml",
+    "category": "ai-company"
+  },
+  {
+    "name": "Matt Wolfe",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCJifBHSDVMR0wIJnMYkq2gg",
+    "category": "youtube"
+  },
+  {
+    "name": "AI Explained",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCNJ1Ymd5yFuUPtn21xtRbbw",
+    "category": "youtube"
+  },
+  {
+    "name": "Two Minute Papers",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCbfYPyITQ-7l4upoX8nvctg",
+    "category": "youtube"
+  },
+  {
+    "name": "Fireship",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCsBjURrPoezykLs9EqgamOA",
+    "category": "youtube"
+  },
+  {
+    "name": "TheAIGRID",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCJHnlbGcJSQQDoXHRjgB2qg",
+    "category": "youtube"
+  }
+]
