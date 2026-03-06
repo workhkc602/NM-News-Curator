@@ -182,17 +182,39 @@ def summarize(entries: list[dict]) -> str:
 
 Language: {lang['prompt']}
 
-Requirements:
-1. Group articles about the same news topic into a single entry, listing all source URLs together
-2. Importance = how many different sources cover the same topic. More sources = more important = listed first
-3. Start with a "Key Highlights" section — 3 bullet points on the most covered/important developments
-4. Then list remaining news grouped by topic, each with a 1-2 sentence summary and all related source URLs
-5. Mark YouTube videos with a [Video] tag
+Rules:
+1. Group articles about the same news topic into ONE entry. More sources on the same topic = more important = listed first.
+2. For each source URL, display as a markdown link using the source name: [TechCrunch](url) [The Verge](url)
+3. Mark YouTube videos with [Video] tag in the summary.
+
+You MUST use EXACTLY this markdown format (no deviations):
+
+## Key Highlights
+
+- **Topic sentence here** — 1 sentence explanation. [Source1](url) [Source2](url)
+- **Topic sentence here** — 1 sentence explanation. [Source1](url)
+- **Topic sentence here** — 1 sentence explanation. [Source1](url)
+
+## Major Releases
+
+- **Topic** — 1-2 sentence summary. [Source1](url) [Source2](url)
+
+## Product Updates
+
+- **Topic** — 1-2 sentence summary. [Source1](url)
+
+## Industry Analysis
+
+- **Topic** — 1-2 sentence summary. [Source1](url)
+
+## Tutorials
+
+- **Topic** — 1 sentence summary. [Source1](url)
 
 Today's articles ({len(entries)} total):
 {articles_text}
 
-Output the digest directly, no preamble."""
+Output the digest directly using the exact format above. Use ## for section headers. Use - for every bullet. Use **bold** for every topic. Use [name](url) for every link. Skip sections that have no relevant articles. No other formats."""
 
     resp = httpx.post(
         f"{LLM_BASE_URL}/chat/completions",
