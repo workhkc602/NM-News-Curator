@@ -1,14 +1,17 @@
 """
 AI News Curator — Daily AI news digest delivered to your inbox.
-Fetches from RSS feeds, summarizes via Groq (free), emails via Brevo (free).
-Designed to run as a Railway cron job.
+Fetches from RSS feeds, summarizes with any OpenAI-compatible LLM, emails via
+Brevo, Resend, SendGrid, or SMTP. Designed to run as a cron job.
 """
 
 import os
 import json
 import logging
 import re
+import smtplib
 from datetime import datetime, timedelta, timezone
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 
@@ -22,15 +25,29 @@ log = logging.getLogger(__name__)
 # Configuration (all from environment variables)
 # ---------------------------------------------------------------------------
 
-GROQ_API_KEY = os.environ["GROQ_API_KEY"]
-BREVO_API_KEY = os.environ["BREVO_API_KEY"]
+# LLM (any OpenAI-compatible API)
+LLM_API_KEY = os.environ["LLM_API_KEY"]
+LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "https://api.groq.com/openai/v1")
+LLM_MODEL = os.environ.get("LLM_MODEL", "llama-3.3-70b-versatile")
+
+# Email
+EMAIL_PROVIDER = os.environ.get("EMAIL_PROVIDER", "brevo").lower()
+EMAIL_API_KEY = os.environ.get("EMAIL_API_KEY", "")
 EMAIL_TO = os.environ.get("EMAIL_TO", "you@example.com")
-SENDER_EMAIL = os.environ.get("BREVO_SENDER_EMAIL", "noreply@example.com")
-SENDER_NAME = os.environ.get("BREVO_SENDER_NAME", "AI News")
-GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
+SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "noreply@example.com")
+SENDER_NAME = os.environ.get("SENDER_NAME", "AI News")
+
+# SMTP (only needed if EMAIL_PROVIDER=smtp)
+SMTP_HOST = os.environ.get("SMTP_HOST", "")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+SMTP_USER = os.environ.get("SMTP_USER", "")
+SMTP_PASS = os.environ.get("SMTP_PASS", "")
+
+# General
 HOURS_LOOKBACK = int(os.environ.get("HOURS_LOOKBACK", "26"))
 LANGUAGE = os.environ.get("LANGUAGE", "zh-HK")
 SOURCES_FILE = os.environ.get("SOURCES_FILE", "sources.json")
+TZ_OFFSET = int(os.environ.get("TZ_OFFSET", "8"))
 
 # ---------------------------------------------------------------------------
 # Language presets
@@ -77,7 +94,6 @@ def get_lang_config() -> dict:
     """Get language config from preset or fallback to custom prompt."""
     if LANGUAGE in LANGUAGE_PRESETS:
         return LANGUAGE_PRESETS[LANGUAGE]
-    # Treat LANGUAGE value as a custom language instruction
     return {
         "name": LANGUAGE,
         "prompt": f"Write in {LANGUAGE}.",
@@ -151,8 +167,8 @@ def fetch_recent_entries(hours: int = HOURS_LOOKBACK) -> list[dict]:
     return entries
 
 
-def summarize_with_groq(entries: list[dict]) -> str:
-    """Send entries to Groq for summarization."""
+def summarize(entries: list[dict]) -> str:
+    """Send entries to LLM for summarization via OpenAI-compatible API."""
     lang = get_lang_config()
 
     if not entries:
@@ -183,10 +199,10 @@ Today's articles ({len(entries)} total):
 Output the digest directly, no preamble."""
 
     resp = httpx.post(
-        "https://api.groq.com/openai/v1/chat/completions",
-        headers={"Authorization": f"Bearer {GROQ_API_KEY}"},
+        f"{LLM_BASE_URL}/chat/completions",
+        headers={"Authorization": f"Bearer {LLM_API_KEY}"},
         json={
-            "model": GROQ_MODEL,
+            "model": LLM_MODEL,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.3,
             "max_tokens": 4000,
@@ -198,17 +214,30 @@ Output the digest directly, no preamble."""
 
 
 # ---------------------------------------------------------------------------
-# Email
+# Email (multi-provider)
 # ---------------------------------------------------------------------------
 
 def send_email(subject: str, html_body: str):
-    """Send newsletter via Brevo transactional email API."""
+    """Send email via the configured provider."""
+    providers = {
+        "brevo": _send_brevo,
+        "resend": _send_resend,
+        "sendgrid": _send_sendgrid,
+        "smtp": _send_smtp,
+    }
+    provider_fn = providers.get(EMAIL_PROVIDER)
+    if not provider_fn:
+        raise ValueError(
+            f"Unknown EMAIL_PROVIDER: '{EMAIL_PROVIDER}'. "
+            f"Supported: {', '.join(providers)}"
+        )
+    provider_fn(subject, html_body)
+
+
+def _send_brevo(subject: str, html_body: str):
     resp = httpx.post(
         "https://api.brevo.com/v3/smtp/email",
-        headers={
-            "api-key": BREVO_API_KEY,
-            "Content-Type": "application/json",
-        },
+        headers={"api-key": EMAIL_API_KEY, "Content-Type": "application/json"},
         json={
             "sender": {"name": SENDER_NAME, "email": SENDER_EMAIL},
             "to": [{"email": EMAIL_TO}],
@@ -218,8 +247,61 @@ def send_email(subject: str, html_body: str):
         timeout=30,
     )
     resp.raise_for_status()
-    log.info(f"Email sent: {resp.json()}")
+    log.info(f"Email sent via Brevo: {resp.json()}")
 
+
+def _send_resend(subject: str, html_body: str):
+    resp = httpx.post(
+        "https://api.resend.com/emails",
+        headers={"Authorization": f"Bearer {EMAIL_API_KEY}"},
+        json={
+            "from": f"{SENDER_NAME} <{SENDER_EMAIL}>",
+            "to": [EMAIL_TO],
+            "subject": subject,
+            "html": html_body,
+        },
+        timeout=30,
+    )
+    resp.raise_for_status()
+    log.info(f"Email sent via Resend: {resp.json()}")
+
+
+def _send_sendgrid(subject: str, html_body: str):
+    resp = httpx.post(
+        "https://api.sendgrid.com/v3/mail/send",
+        headers={
+            "Authorization": f"Bearer {EMAIL_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "personalizations": [{"to": [{"email": EMAIL_TO}]}],
+            "from": {"email": SENDER_EMAIL, "name": SENDER_NAME},
+            "subject": subject,
+            "content": [{"type": "text/html", "value": html_body}],
+        },
+        timeout=30,
+    )
+    resp.raise_for_status()
+    log.info("Email sent via SendGrid")
+
+
+def _send_smtp(subject: str, html_body: str):
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = f"{SENDER_NAME} <{SENDER_EMAIL}>"
+    msg["To"] = EMAIL_TO
+    msg.attach(MIMEText(html_body, "html"))
+
+    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+        server.starttls()
+        server.login(SMTP_USER, SMTP_PASS)
+        server.sendmail(SENDER_EMAIL, [EMAIL_TO], msg.as_string())
+    log.info("Email sent via SMTP")
+
+
+# ---------------------------------------------------------------------------
+# HTML rendering
+# ---------------------------------------------------------------------------
 
 def markdown_to_html(md: str) -> str:
     """Convert markdown to simple HTML for email rendering."""
@@ -273,7 +355,7 @@ def markdown_to_html(md: str) -> str:
 
 def main():
     lang = get_lang_config()
-    today = datetime.now(timezone(timedelta(hours=8)))  # HKT
+    today = datetime.now(timezone(timedelta(hours=TZ_OFFSET)))
     date_str = today.strftime("%Y-%m-%d")
     log.info(f"=== AI News Curator — {date_str} ({lang['name']}) ===")
 
@@ -283,7 +365,7 @@ def main():
         log.info("No recent entries found. Skipping.")
         return
 
-    newsletter = summarize_with_groq(entries)
+    newsletter = summarize(entries)
     log.info(f"Newsletter generated ({len(newsletter)} chars)")
 
     subject = lang["subject_template"].format(date=date_str, count=len(entries))
