@@ -183,10 +183,10 @@ def summarize(entries: list[dict]) -> str:
 Language: {lang['prompt']}
 
 Requirements:
-1. Start with a "Key Highlights" section — 3 bullet points summarizing the most important developments
-2. Then organize remaining news by importance (Major Releases > Product Updates > Industry Analysis > Tutorials)
-3. Summarize each item in 1-2 sentences with the source URL
-4. Merge related articles into a single entry
+1. Group articles about the same news topic into a single entry, listing all source URLs together
+2. Importance = how many different sources cover the same topic. More sources = more important = listed first
+3. Start with a "Key Highlights" section — 3 bullet points on the most covered/important developments
+4. Then list remaining news grouped by topic, each with a 1-2 sentence summary and all related source URLs
 5. Mark YouTube videos with a [Video] tag
 
 Today's articles ({len(entries)} total):
