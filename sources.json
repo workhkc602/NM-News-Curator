@@ -50,9 +50,34 @@
     "category": "ai-company"
   },
   {
-    "name": "Matt Wolfe",
-    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCJifBHSDVMR0wIJnMYkq2gg",
-    "category": "youtube"
+    "name": "Y Combinator (Hacker News)",
+    "url": "https://news.ycombinator.com/rss",
+    "category": "tech-media"
+  },
+  {
+    "name": "a16z",
+    "url": "https://www.a16z.news/feed",
+    "category": "vc-insight"
+  },
+  {
+    "name": "TechOrange 科技報橘",
+    "url": "https://techorange.com/feed/",
+    "category": "zh-media"
+  },
+  {
+    "name": "unwire.hk",
+    "url": "https://unwire.hk/feed/",
+    "category": "zh-media"
+  },
+  {
+    "name": "量子位 QbitAI",
+    "url": "https://www.qbitai.com/feed",
+    "category": "zh-media"
+  },
+  {
+    "name": "36氪",
+    "url": "https://36kr.com/feed",
+    "category": "zh-media"
   },
   {
     "name": "AI Explained",
@@ -65,13 +90,28 @@
     "category": "youtube"
   },
   {
-    "name": "Fireship",
-    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCsBjURrPoezykLs9EqgamOA",
+    "name": "TheAIGRID",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCJHnlbGcJSQQDoXHRjgB2qg",
     "category": "youtube"
   },
   {
-    "name": "TheAIGRID",
-    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCJHnlbGcJSQQDoXHRjgB2qg",
+    "name": "DeepLearningAI",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCcIXc5mJsHVYTZR1maL5l9w",
+    "category": "youtube"
+  },
+  {
+    "name": "fOx Hsiao",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC_Kvz3mbTwLOyJzFPHmDwKQ",
+    "category": "youtube"
+  },
+  {
+    "name": "Y Combinator",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCcefcZRL2oaA_uBNeo5UOWg",
+    "category": "youtube"
+  },
+  {
+    "name": "a16z",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC9cn0TuPq4dnbTY-CBsm8XA",
     "category": "youtube"
   }
 ]
