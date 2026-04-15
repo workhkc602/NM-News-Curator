@@ -1,117 +1,57 @@
 [
   {
-    "name": "TechCrunch AI",
-    "url": "https://techcrunch.com/category/artificial-intelligence/feed/",
-    "category": "tech-media"
+    "name": "HKSAR Government Press Releases (EN)",
+    "url": "https://www.info.gov.hk/gia/rss/general_en.xml",
+    "category": "gov-hk"
   },
   {
-    "name": "The Verge AI",
-    "url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml",
-    "category": "tech-media"
+    "name": "HKSAR Government Press Releases (繁體)",
+    "url": "https://www.info.gov.hk/gia/rss/general_zh.xml",
+    "category": "gov-hk"
   },
   {
-    "name": "Ars Technica",
-    "url": "https://feeds.arstechnica.com/arstechnica/technology-lab",
-    "category": "tech-media"
+    "name": "CEDD Latest News (EN)",
+    "url": "https://www.cedd.gov.hk/eng/rss/cedd_news_rss.xml",
+    "category": "gov-hk"
   },
   {
-    "name": "MIT Tech Review",
-    "url": "https://www.technologyreview.com/feed/",
-    "category": "tech-media"
+    "name": "CEDD Latest News (繁體)",
+    "url": "https://www.cedd.gov.hk/tc/rss/cedd_news_rss.xml",
+    "category": "gov-hk"
   },
   {
-    "name": "VentureBeat AI",
-    "url": "https://venturebeat.com/category/ai/feed/",
-    "category": "tech-media"
+    "name": "news.gov.hk - Infrastructure & Logistics",
+    "url": "https://www.news.gov.hk/en/categories/infrastructure/html/articlelist.rss.xml",
+    "category": "gov-hk"
   },
   {
-    "name": "OpenAI Blog",
-    "url": "https://openai.com/blog/rss.xml",
-    "category": "ai-company"
+    "name": "South China Morning Post (HK News)",
+    "url": "https://www.scmp.com/rss/2/feed",
+    "category": "media-en"
   },
   {
-    "name": "Anthropic News",
-    "url": "https://www.anthropic.com/rss.xml",
-    "category": "ai-company"
+    "name": "Hong Kong Free Press",
+    "url": "https://hongkongfp.com/feed/",
+    "category": "media-en"
   },
   {
-    "name": "Google AI Blog",
-    "url": "https://blog.google/technology/ai/rss/",
-    "category": "ai-company"
+    "name": "Ming Pao (港聞 / Local News)",
+    "url": "https://news.mingpao.com/php/rss.php",
+    "category": "media-zh"
   },
   {
-    "name": "Meta AI Blog",
-    "url": "https://ai.meta.com/blog/rss/",
-    "category": "ai-company"
+    "name": "The Standard (HK)",
+    "url": "https://www.thestandard.com.hk/newsfeed/latest/news.xml",
+    "category": "media-en"
   },
   {
-    "name": "HuggingFace Blog",
-    "url": "https://huggingface.co/blog/feed.xml",
-    "category": "ai-company"
+    "name": "Development Bureau DEVB Official (Videos)",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCgpyfNoWCNef7JirR3ssr9A",
+    "category": "gov-hk-video"
   },
   {
-    "name": "Y Combinator (Hacker News)",
-    "url": "https://news.ycombinator.com/rss",
-    "category": "tech-media"
-  },
-  {
-    "name": "a16z",
-    "url": "https://www.a16z.news/feed",
-    "category": "vc-insight"
-  },
-  {
-    "name": "TechOrange 科技報橘",
-    "url": "https://techorange.com/feed/",
-    "category": "zh-media"
-  },
-  {
-    "name": "unwire.hk",
-    "url": "https://unwire.hk/feed/",
-    "category": "zh-media"
-  },
-  {
-    "name": "量子位 QbitAI",
-    "url": "https://www.qbitai.com/feed",
-    "category": "zh-media"
-  },
-  {
-    "name": "36氪",
-    "url": "https://36kr.com/feed",
-    "category": "zh-media"
-  },
-  {
-    "name": "AI Explained",
-    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCNJ1Ymd5yFuUPtn21xtRbbw",
-    "category": "youtube"
-  },
-  {
-    "name": "Two Minute Papers",
-    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCbfYPyITQ-7l4upoX8nvctg",
-    "category": "youtube"
-  },
-  {
-    "name": "TheAIGRID",
-    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCJHnlbGcJSQQDoXHRjgB2qg",
-    "category": "youtube"
-  },
-  {
-    "name": "DeepLearningAI",
-    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCcIXc5mJsHVYTZR1maL5l9w",
-    "category": "youtube"
-  },
-  {
-    "name": "fOx Hsiao",
-    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC_Kvz3mbTwLOyJzFPHmDwKQ",
-    "category": "youtube"
-  },
-  {
-    "name": "Y Combinator",
-    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCcefcZRL2oaA_uBNeo5UOWg",
-    "category": "youtube"
-  },
-  {
-    "name": "a16z",
-    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC9cn0TuPq4dnbTY-CBsm8XA",
-    "category": "youtube"
+    "name": "Legislative Council of HKSAR (Meetings & NM Discussions)",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC29NAwW0H0kvi239sD7kT7w",
+    "category": "gov-hk-video"
   }
 ]
