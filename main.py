@@ -149,67 +149,79 @@ def fetch_recent_entries(hours: int = HOURS_LOOKBACK) -> list[dict]:
     return entries
 
 
+import time
+
 def summarize(entries: list[dict]) -> str:
-    """Send entries to LLM for summarization via OpenAI-compatible API."""
+    if not entries:
+        return lang.get("empty_message", "No updates this week.")
+
+    articles_text = "\n".join(
+        f"- {e['title']} | {e['link']} | {e.get('published', '')}"
+        for e in entries
+    )
+
     lang = get_lang_config()
 
-    if not entries:
-        return lang["empty_message"]
-
-    articles_text = ""
-    for i, e in enumerate(entries, 1):
-        articles_text += f"\n{i}. [{e['source']}] {e['title']} — {e['url']}"
-
-        prompt = f"""You are a news editor specializing in Hong Kong urban development and the Northern Metropolis (北部都會區).
+    prompt = f"""You are a news editor specializing in Hong Kong urban development and the Northern Metropolis (北部都會區).
 
 Language: {lang['prompt']}
 
 Rules:
-1. Group articles about the same news topic into ONE entry. More sources on the same topic = more important = listed first.
-2. Translate any Chinese-language titles or content into natural, professional English.
-3. For each source URL, display as a markdown link using the source name: [HKSAR Gov](url) [SCMP](url) [CEDD](url)
-4. Mark YouTube videos with **[Video]** tag.
+1. Group articles about the same news topic into ONE entry.
+2. Translate any Chinese content into natural, professional English.
+3. Use markdown links: [HKSAR Gov](url) [SCMP](url) etc.
+4. Mark videos with **[Video]**.
 
-You MUST use EXACTLY this markdown format (no deviations):
+Use EXACTLY this format:
 
 ## Key Highlights
-
-- **Topic sentence here** — 1 sentence explanation. [Source1](url) [Source2](url)
+- **Topic** — 1 sentence explanation. [Source](url)
 
 ## Policy Updates
-
-- **Topic** — 1-2 sentence summary. [Source1](url)
+- **Topic** — 1-2 sentence summary. [Source](url)
 
 ## Infrastructure & Projects
-
-- **Topic** — 1-2 sentence summary. [Source1](url) [Source2](url)
+- **Topic** — 1-2 sentence summary. [Source](url)
 
 ## Land Development & Planning
-
-- **Topic** — 1-2 sentence summary. [Source1](url)
+- **Topic** — 1-2 sentence summary. [Source](url)
 
 ## Other Related
-
-- **Topic** — 1 sentence summary. [Source1](url)
+- **Topic** — 1 sentence summary. [Source](url)
 
 Today's articles ({len(entries)} total):
 {articles_text}
 
-Output the digest directly using the exact format above. Use ## for section headers. Use - for every bullet. Use **bold** for every topic. Use [name](url) for every link. Skip sections that have no relevant articles. No other formats."""
-    resp = httpx.post(
-        f"{LLM_BASE_URL}/chat/completions",
-        headers={"Authorization": f"Bearer {LLM_API_KEY}"},
-        json={
-            "model": LLM_MODEL,
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.3,
-            "max_tokens": 4000,
-        },
-        timeout=60,
-    )
-    resp.raise_for_status()
-    return resp.json()["choices"][0]["message"]["content"]
+Output only the markdown digest. Skip empty sections."""
+    
+    # Retry logic for Gemini 503 errors
+    for attempt in range(5):
+        try:
+            resp = httpx.post(
+                LLM_BASE_URL + "/chat/completions",
+                headers={"Authorization": f"Bearer {LLM_API_KEY}"},
+                json={
+                    "model": LLM_MODEL,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.3,
+                },
+                timeout=120,
+            )
+            resp.raise_for_status()
+            break
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 503 and attempt < 4:
+                wait = 2 ** attempt  # 1s, 2s, 4s, 8s
+                log.warning(f"Gemini 503 (attempt {attempt+1}/5) — retrying in {wait}s...")
+                time.sleep(wait)
+                continue
+            raise
+        except Exception as e:
+            log.error(f"Unexpected error: {e}")
+            raise
 
+    result = resp.json()
+    return result["choices"][0]["message"]["content"].strip()
 
 # ---------------------------------------------------------------------------
 # Email (multi-provider)
