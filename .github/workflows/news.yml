@@ -3,7 +3,7 @@ name: Northern Metropolis Digest
 on:
   schedule:
     - cron: '0 0 * * 1'      # Every Monday at 00:00 UTC = 8:00 AM HKT
-  workflow_dispatch:         # Allows manual test run
+  workflow_dispatch:         # Allows you to run it manually anytime
 
 jobs:
   run:
