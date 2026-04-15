@@ -140,29 +140,49 @@ def send_email(content: str):
     log.info("✅ QS Industry Digest sent successfully!")
 
 def main():
-    log.info("=== Starting Northern Metropolis QS News Funnel ===")
+    log.info("=== Starting Northern Metropolis & HK Industry News Funnel ===")
     
-    # 1. Assume entries are fetched here (Keep your existing scrapers below or in your script)
-    # For this example, I'm assuming 'all_entries' is the list of everything scraped.
-    all_entries = [] 
-    
-    # --- [INSERT YOUR SCRAPER FUNCTIONS HERE] ---
-    # Example: all_entries.extend(fetch_gov_news())
-    
-    # 2. Loose Filtering (Contextual Catch)
-    filtered = [
-        e for e in all_entries 
-        if any(m.lower() in e.get('title', '').lower() for m in BROAD_MARKERS)
-    ]
-    
-    log.info(f"Scraped {len(all_entries)} total. Found {len(filtered)} potentially relevant to QS.")
+    all_entries = []
+    # --- [YOUR SCRAPER CALLS HERE] ---
+    # e.g., all_entries.extend(fetch_hksar_press_releases_en())
+    # ... ensure all your scrapers are listed here ...
 
-    # 3. Summarize and Send
+    # 1. Geographic & Business Markers
+    NM_MARKERS = ["Northern Metropolis", "北部都會區", "San Tin", "新田", "Hung Shui Kiu", "洪水橋", "Kwu Tung", "古洞", "Fanling", "粉嶺"]
+    BIZ_MARKERS = ["Tender", "招標", "Contract", "合約", "GFA", "樓面面積", "Land Sale", "賣地", "Consultancy", "顧問"]
+
+    filtered = []
+    for e in all_entries:
+        # Check both Title and Description for clues
+        text = (e.get('title', '') + " " + e.get('description', '')).lower()
+        
+        is_nm = any(m.lower() in text for m in NM_MARKERS)
+        is_tender = any(m.lower() in text for m in BIZ_MARKERS)
+        
+        if is_nm or is_tender:
+            filtered.append(e)
+    
+    log.info(f"Scraped {len(all_entries)} total. Kept {len(filtered)} leads.")
+
+    # 2. Logic to handle the Digest
+    lang = get_lang_config()
+    
     if filtered:
+        # Scenario: Relevant news found!
         digest = summarize(filtered)
         send_email(digest)
+    elif all_entries:
+        # Scenario A: News exists, but none passed the QS filter
+        status_update = (
+            "### System Status: No Industry Leads Found\n\n"
+            f"The AI News Curator scanned {len(all_entries)} articles today but found no "
+            "new tenders or specific Northern Metropolis development updates matching your criteria.\n\n"
+            "The bot is still active and will check again on schedule."
+        )
+        send_email(status_update)
     else:
-        log.info("No industry-relevant news to report this week.")
+        # Scenario B: Scrapers failed to get anything
+        log.warning("Scrapers returned zero results. No email sent.")
 
 if __name__ == "__main__":
     main()
