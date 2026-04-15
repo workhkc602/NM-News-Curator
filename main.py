@@ -22,33 +22,43 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Configuration (all from environment variables)
+# Configuration (all from environment variables) - ROBUST VERSION
 # ---------------------------------------------------------------------------
 
-# LLM (any OpenAI-compatible API)
-LLM_API_KEY = os.environ["LLM_API_KEY"]
-LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "https://api.groq.com/openai/v1")
-LLM_MODEL = os.environ.get("LLM_MODEL", "llama-3.3-70b-versatile")
+def get_env(name: str, default: str = None):
+    """Safe environment variable loader with clear error."""
+    value = os.environ.get(name)
+    if value is None:
+        if default is not None:
+            return default
+        log.error(f"❌ MISSING ENVIRONMENT VARIABLE: {name}")
+        log.error("Please add it in Railway → Variables tab and Redeploy.")
+        raise KeyError(f"Missing required environment variable: {name}")
+    return value
+
+# LLM (Gemini)
+LLM_API_KEY = get_env("LLM_API_KEY")
+LLM_BASE_URL = get_env("LLM_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai")
+LLM_MODEL = get_env("LLM_MODEL", "gemini-2.5-flash")
 
 # Email
-EMAIL_PROVIDER = os.environ.get("EMAIL_PROVIDER", "brevo").lower()
-EMAIL_API_KEY = os.environ.get("EMAIL_API_KEY", "")
-EMAIL_TO = os.environ.get("EMAIL_TO", "you@example.com")
-SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "noreply@example.com")
-SENDER_NAME = os.environ.get("SENDER_NAME", "AI News")
+EMAIL_PROVIDER = get_env("EMAIL_PROVIDER", "smtp").lower()
+EMAIL_API_KEY = get_env("EMAIL_API_KEY", "")          # not needed for smtp
+EMAIL_TO = get_env("EMAIL_TO")
+SENDER_EMAIL = get_env("SENDER_EMAIL")
+SENDER_NAME = get_env("SENDER_NAME", "Northern Metropolis Digest")
 
-# SMTP (only needed if EMAIL_PROVIDER=smtp)
-SMTP_HOST = os.environ.get("SMTP_HOST", "")
-SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
-SMTP_USER = os.environ.get("SMTP_USER", "")
-SMTP_PASS = os.environ.get("SMTP_PASS", "")
+# SMTP (Gmail)
+SMTP_HOST = get_env("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(get_env("SMTP_PORT", "587"))
+SMTP_USER = get_env("SMTP_USER")
+SMTP_PASS = get_env("SMTP_PASS")
 
 # General
-HOURS_LOOKBACK = int(os.environ.get("HOURS_LOOKBACK", "26"))
-LANGUAGE = os.environ.get("LANGUAGE", "zh-HK")
-SOURCES_FILE = os.environ.get("SOURCES_FILE", "sources.json")
-TZ_OFFSET = int(os.environ.get("TZ_OFFSET", "8"))
-
+HOURS_LOOKBACK = int(get_env("HOURS_LOOKBACK", "168"))   # 7 days for weekly
+LANGUAGE = get_env("LANGUAGE", "en")
+SOURCES_FILE = get_env("SOURCES_FILE", "sources.json")
+TZ_OFFSET = int(get_env("TZ_OFFSET", "8"))
 # ---------------------------------------------------------------------------
 # Language presets (NOW FORCED TO ENGLISH + NORTHERN METROPOLIS FOCUS)
 # ---------------------------------------------------------------------------
