@@ -50,58 +50,21 @@ SOURCES_FILE = os.environ.get("SOURCES_FILE", "sources.json")
 TZ_OFFSET = int(os.environ.get("TZ_OFFSET", "8"))
 
 # ---------------------------------------------------------------------------
-# Language presets
+# Language presets (NOW FORCED TO ENGLISH + NORTHERN METROPOLIS FOCUS)
 # ---------------------------------------------------------------------------
 
 LANGUAGE_PRESETS = {
-    "zh-HK": {
-        "name": "香港書面中文",
-        "prompt": (
-            "用**香港書面中文**撰寫（繁體中文，不用簡體、不用大陸用語、不用台灣語氣）。"
-            "英文專有名詞保留原文。"
-        ),
-        "subject_template": "AI 日報 — {date}（{count} 則新聞）",
-        "empty_message": "今日暫無重大 AI 新聞。",
-    },
-    "zh-TW": {
-        "name": "繁體中文（台灣）",
-        "prompt": "用**繁體中文（台灣用語）**撰寫。英文專有名詞保留原文。",
-        "subject_template": "AI 日報 — {date}（{count} 則新聞）",
-        "empty_message": "今日暫無重大 AI 新聞。",
-    },
-    "zh-CN": {
-        "name": "简体中文",
-        "prompt": "用**简体中文**撰写。英文专有名词保留原文。",
-        "subject_template": "AI 日报 — {date}（{count} 条新闻）",
-        "empty_message": "今日暂无重大 AI 新闻。",
-    },
     "en": {
         "name": "English",
-        "prompt": "Write in **English**.",
-        "subject_template": "AI Daily — {date} ({count} articles)",
-        "empty_message": "No major AI news today.",
-    },
-    "ja": {
-        "name": "日本語",
-        "prompt": "**日本語**で書いてください。英語の専門用語はそのまま使ってください。",
-        "subject_template": "AI日報 — {date}（{count}件）",
-        "empty_message": "本日の主要AIニュースはありません。",
+        "prompt": (
+            "Write in **clear, professional English**. "
+            "Translate any Chinese news content into natural English. "
+            "Keep all Hong Kong-specific terms (e.g. Northern Metropolis, Hung Shui Kiu, New Territories North) in their original English form."
+        ),
+        "subject_template": "Northern Metropolis Development Digest — {date} ({count} updates)",
+        "empty_message": "No Northern Metropolis development updates this week.",
     },
 }
-
-
-def get_lang_config() -> dict:
-    """Get language config from preset or fallback to custom prompt."""
-    if LANGUAGE in LANGUAGE_PRESETS:
-        return LANGUAGE_PRESETS[LANGUAGE]
-    return {
-        "name": LANGUAGE,
-        "prompt": f"Write in {LANGUAGE}.",
-        "subject_template": "AI Daily — {date} ({count} articles)",
-        "empty_message": "No major AI news today.",
-    }
-
-
 # ---------------------------------------------------------------------------
 # Sources
 # ---------------------------------------------------------------------------
@@ -178,36 +141,35 @@ def summarize(entries: list[dict]) -> str:
     for i, e in enumerate(entries, 1):
         articles_text += f"\n{i}. [{e['source']}] {e['title']} — {e['url']}"
 
-    prompt = f"""You are an AI news editor. Compile the following articles into a concise daily digest.
+        prompt = f"""You are a news editor specializing in Hong Kong urban development and the Northern Metropolis (北部都會區).
 
 Language: {lang['prompt']}
 
 Rules:
 1. Group articles about the same news topic into ONE entry. More sources on the same topic = more important = listed first.
-2. For each source URL, display as a markdown link using the source name: [TechCrunch](url) [The Verge](url)
-3. Mark YouTube videos with [Video] tag in the summary.
+2. Translate any Chinese-language titles or content into natural, professional English.
+3. For each source URL, display as a markdown link using the source name: [HKSAR Gov](url) [SCMP](url) [CEDD](url)
+4. Mark YouTube videos with **[Video]** tag.
 
 You MUST use EXACTLY this markdown format (no deviations):
 
 ## Key Highlights
 
 - **Topic sentence here** — 1 sentence explanation. [Source1](url) [Source2](url)
-- **Topic sentence here** — 1 sentence explanation. [Source1](url)
-- **Topic sentence here** — 1 sentence explanation. [Source1](url)
 
-## Major Releases
+## Policy Updates
+
+- **Topic** — 1-2 sentence summary. [Source1](url)
+
+## Infrastructure & Projects
 
 - **Topic** — 1-2 sentence summary. [Source1](url) [Source2](url)
 
-## Product Updates
+## Land Development & Planning
 
 - **Topic** — 1-2 sentence summary. [Source1](url)
 
-## Industry Analysis
-
-- **Topic** — 1-2 sentence summary. [Source1](url)
-
-## Tutorials
+## Other Related
 
 - **Topic** — 1 sentence summary. [Source1](url)
 
@@ -215,7 +177,6 @@ Today's articles ({len(entries)} total):
 {articles_text}
 
 Output the digest directly using the exact format above. Use ## for section headers. Use - for every bullet. Use **bold** for every topic. Use [name](url) for every link. Skip sections that have no relevant articles. No other formats."""
-
     resp = httpx.post(
         f"{LLM_BASE_URL}/chat/completions",
         headers={"Authorization": f"Bearer {LLM_API_KEY}"},
