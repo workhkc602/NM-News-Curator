@@ -22,7 +22,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Configuration (all from environment variables) - ROBUST VERSION
+# Configuration - ROBUST VERSION (GitHub Actions)
 # ---------------------------------------------------------------------------
 
 def get_env(name: str, default: str = None):
@@ -32,7 +32,7 @@ def get_env(name: str, default: str = None):
         if default is not None:
             return default
         log.error(f"❌ MISSING ENVIRONMENT VARIABLE: {name}")
-        log.error("Please add it in Railway → Variables tab and Redeploy.")
+        log.error("Please check GitHub → Settings → Secrets and variables → Actions")
         raise KeyError(f"Missing required environment variable: {name}")
     return value
 
@@ -41,7 +41,7 @@ LLM_API_KEY = get_env("LLM_API_KEY")
 LLM_BASE_URL = get_env("LLM_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai")
 LLM_MODEL = get_env("LLM_MODEL", "gemini-2.5-flash")
 
-# Email
+# Email (Gmail SMTP)
 EMAIL_PROVIDER = get_env("EMAIL_PROVIDER", "smtp").lower()
 EMAIL_API_KEY = get_env("EMAIL_API_KEY", "")          # not needed for smtp
 EMAIL_TO = get_env("EMAIL_TO")
@@ -55,7 +55,7 @@ SMTP_USER = get_env("SMTP_USER")
 SMTP_PASS = get_env("SMTP_PASS")
 
 # General
-HOURS_LOOKBACK = int(get_env("HOURS_LOOKBACK", "168"))   # 7 days for weekly
+HOURS_LOOKBACK = int(get_env("HOURS_LOOKBACK", "168"))
 LANGUAGE = get_env("LANGUAGE", "en")
 SOURCES_FILE = get_env("SOURCES_FILE", "sources.json")
 TZ_OFFSET = int(get_env("TZ_OFFSET", "8"))
