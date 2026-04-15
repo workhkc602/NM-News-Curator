@@ -75,6 +75,15 @@ LANGUAGE_PRESETS = {
         "empty_message": "No Northern Metropolis development updates this week.",
     },
 }
+
+def get_lang_config():
+    """Return language settings for the requested language."""
+    lang_code = LANGUAGE
+    if lang_code not in LANGUAGE_PRESETS:
+        log.warning(f"Language '{lang_code}' not found, falling back to English")
+        lang_code = "en"
+    return LANGUAGE_PRESETS[lang_code]
+    
 # ---------------------------------------------------------------------------
 # Sources
 # ---------------------------------------------------------------------------
