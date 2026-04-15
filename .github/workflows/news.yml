@@ -1,0 +1,32 @@
+name: Northern Metropolis Digest
+
+on:
+  schedule:
+    - cron: '0 0 * * 1'      # Every Monday at 00:00 UTC = 8:00 AM HKT
+  workflow_dispatch:         # Allows manual test run
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - run: python main.py
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
+          LLM_MODEL: ${{ secrets.LLM_MODEL }}
+          EMAIL_PROVIDER: ${{ secrets.EMAIL_PROVIDER }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+          SENDER_NAME: ${{ secrets.SENDER_NAME }}
+          LANGUAGE: ${{ secrets.LANGUAGE }}
+          TZ_OFFSET: ${{ secrets.TZ_OFFSET }}
+          HOURS_LOOKBACK: ${{ secrets.HOURS_LOOKBACK }}
