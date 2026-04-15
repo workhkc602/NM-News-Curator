@@ -152,51 +152,33 @@ def fetch_recent_entries(hours: int = HOURS_LOOKBACK) -> list[dict]:
 import time
 
 def summarize(entries: list[dict]) -> str:
+    lang = get_lang_config()
     if not entries:
         return lang.get("empty_message", "No updates this week.")
 
+    # Using .get() prevents the 'KeyError' crash if 'link' or 'title' is missing
     articles_text = "\n".join(
-        f"- {e['title']} | {e['link']} | {e.get('published', '')}"
+        f"- {e.get('title', 'No Title')} | {e.get('link', 'No Link')} | {e.get('published', '')}"
         for e in entries
     )
-
-    lang = get_lang_config()
-
+    
     prompt = f"""You are a news editor specializing in Hong Kong urban development and the Northern Metropolis (北部都會區).
-
 Language: {lang['prompt']}
-
 Rules:
 1. Group articles about the same news topic into ONE entry.
 2. Translate any Chinese content into natural, professional English.
-3. Use markdown links: [HKSAR Gov](url) [SCMP](url) etc.
+3. Use markdown links: [Source Name](url).
 4. Mark videos with **[Video]**.
-
-Use EXACTLY this format:
-
-## Key Highlights
-- **Topic** — 1 sentence explanation. [Source](url)
-
-## Policy Updates
-- **Topic** — 1-2 sentence summary. [Source](url)
-
-## Infrastructure & Projects
-- **Topic** — 1-2 sentence summary. [Source](url)
-
-## Land Development & Planning
-- **Topic** — 1-2 sentence summary. [Source](url)
-
-## Other Related
-- **Topic** — 1 sentence summary. [Source](url)
 
 Today's articles ({len(entries)} total):
 {articles_text}
 
 Output only the markdown digest. Skip empty sections."""
-    
+
     # Retry logic for Gemini 503 errors
     for attempt in range(5):
         try:
+            log.info(f"Sending {len(entries)} entries to Gemini (Attempt {attempt+1})...")
             resp = httpx.post(
                 LLM_BASE_URL + "/chat/completions",
                 headers={"Authorization": f"Bearer {LLM_API_KEY}"},
@@ -208,16 +190,17 @@ Output only the markdown digest. Skip empty sections."""
                 timeout=120,
             )
             resp.raise_for_status()
-            break
+            break 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 503 and attempt < 4:
-                wait = 2 ** attempt  # 1s, 2s, 4s, 8s
-                log.warning(f"Gemini 503 (attempt {attempt+1}/5) — retrying in {wait}s...")
+                wait = 2 ** attempt
+                log.warning(f"Gemini 503 (Busy) — retrying in {wait}s...")
                 time.sleep(wait)
                 continue
+            log.error(f"Gemini API Error: {e.response.text}")
             raise
         except Exception as e:
-            log.error(f"Unexpected error: {e}")
+            log.error(f"Unexpected error during summarization: {e}")
             raise
 
     result = resp.json()
