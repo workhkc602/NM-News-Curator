@@ -3,7 +3,7 @@ import logging
 import httpx
 import time
 import feedparser
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -15,15 +15,13 @@ log = logging.getLogger(__name__)
 def get_env(name: str, default: str = None):
     value = os.environ.get(name)
     if value is None:
-        if default is not None:
-            return default
-        log.error(f"❌ MISSING ENVIRONMENT VARIABLE: {name}")
-        raise KeyError(f"Missing required environment variable: {name}")
+        if default is not None: return default
+        raise KeyError(f"Missing environment variable: {name}")
     return value
 
 LLM_API_KEY = get_env("LLM_API_KEY")
-LLM_BASE_URL = get_env("LLM_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai")
-LLM_MODEL = get_env("LLM_MODEL", "gemini-3-flash")
+LLM_BASE_URL = get_env("LLM_BASE_URL") # Set to: https://generativelanguage.googleapis.com/v1beta/openai/
+LLM_MODEL = get_env("LLM_MODEL", "gemini-3-flash-preview")
 
 SMTP_HOST = get_env("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(get_env("SMTP_PORT", "587"))
@@ -31,121 +29,93 @@ SMTP_USER = get_env("SMTP_USER")
 SMTP_PASS = get_env("SMTP_PASS")
 EMAIL_TO = get_env("EMAIL_TO")
 SENDER_EMAIL = get_env("SENDER_EMAIL")
-SENDER_NAME = get_env("SENDER_NAME", "Northern Metropolis Digest")
-
-LANGUAGE = get_env("LANGUAGE", "en")
+SENDER_NAME = get_env("SENDER_NAME", "NM News Curator")
 
 # ---------------------------------------------------------------------------
-# 2. Scraper Functions (The "Shopping")
+# 2. Scrapers (The "Gatherers")
 # ---------------------------------------------------------------------------
-def fetch_hksar_press_releases(lang_code="en"):
-    """Fetches general press releases from GovHK RSS."""
-    url = f"https://www.info.gov.hk/gia/rss/general_{lang_code}.xml"
-    
-    # We use a User-Agent to prevent the Gov site from blocking GitHub Actions
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    }
-
+def fetch_news(url, source_name, source_type="media"):
+    """Generic scraper for Gov RSS and Media RSS."""
+    headers = {"User-Agent": "Mozilla/5.0 Chrome/120.0.0.0 Safari/537.36"}
     try:
         with httpx.Client(headers=headers, follow_redirects=True) as client:
             response = client.get(url, timeout=30.0)
             response.raise_for_status()
-            
         feed = feedparser.parse(response.content)
-        entries = []
-        for entry in feed.entries:
-            entries.append({
-                "title": entry.get("title", ""),
-                "link": entry.get("link", ""),
-                "description": entry.get("description", ""),
-                "published": entry.get("published", "")
-            })
-        return entries
+        log.info(f"{source_name}: Scraped {len(feed.entries)}")
+        
+        return [{
+            "title": e.get("title", ""),
+            "link": e.get("link", ""),
+            "description": e.get("description", ""),
+            "source_type": source_type, # This tag is critical for the AI grouping
+            "source_name": source_name
+        } for e in feed.entries]
     except Exception as e:
-        log.error(f"Error fetching HKSAR {lang_code}: {e}")
+        log.error(f"Error fetching {source_name}: {e}")
         return []
 
 # ---------------------------------------------------------------------------
-# 3. Summarization Logic (The "Chef")
+# 3. AI Summarization (The "Editor")
 # ---------------------------------------------------------------------------
-LANGUAGE_PRESETS = {
-    "en": {
-        "prompt": "Write in professional English. Focus on technical construction and land development details.",
-        "subject_template": "Northern Metropolis BD Digest — {date}",
-        "empty_message": "No industry-relevant updates found in the Northern Metropolis this week.",
-    },
-}
-
-def get_lang_config():
-    return LANGUAGE_PRESETS.get(LANGUAGE, LANGUAGE_PRESETS["en"])
-
 def summarize(entries: list[dict]) -> str:
-    lang = get_lang_config()
-    if not entries:
-        return lang["empty_message"]
+    if not entries: return "No leads found."
 
-    articles_text = "\n".join(
-        f"- {e.get('title', 'No Title')} | {e.get('link', 'No Link')}"
-        for e in entries
-    )
-    
+    # We format the text so the AI knows the source of each article
+    articles_text = ""
+    for e in entries:
+        articles_text += f"[{e['source_type'].upper()}] {e['title']} | {e['link']}\n"
+
     prompt = f"""You are a senior Business Development Manager for a Quantity Surveying (QS) firm.
-Identify "Work-in-Hand" or "Future Lead" opportunities in the Northern Metropolis (NM).
+    
+    START your response with this header:
+    To: Senior Partners / Board of Directors
+    From: NM News Curator
+    Date: {datetime.now().strftime('%B %d, %Y')}
+    Subject: Northern Metropolis (NM) & Major Projects: Opportunity Pipeline Report
 
-SECTOR MAPPING:
-- Transport and Infrastructure
-- Residential / Public Housing
-- Commercial / Retail / Hospitality
-- Corporate Fitouts / A&A (Alterations and Addition)
-- Healthcare / Life Sciences / Education
-- Industrial / Data Centre / Distribution Center
-- Civic / Government / Cultural
-- Maintenance Contracts / Energy
+    ---
 
-STRICT FILTERING LOGIC:
-1. Is this about physical development, land sale, funding, or a contract? 
-2. If YES, and it's related to NM or major projects, INCLUDE.
-3. If NO (crime, social, sports), DISCARD.
+    INSTRUCTIONS:
+    Divide your report into TWO distinct main sections:
+    1. "### HKSAR Gov Press Releases" (For articles tagged [GOV])
+    2. "### NM Development News from Various Media" (For articles tagged [MEDIA])
 
-Format by Sector. Highlight PROJECT SCALE (GFA, cost) if mentioned.
+    Within each section, group leads by these Sectors:
+    - Transport and Infrastructure
+    - Residential / Public Housing
+    - Commercial / Corporate Fitouts
+    - Retail / Hospitality
+    - Healthcare / Education
+    - Industrial / Data Centre
+    - Maintenance / Energy
 
-Articles:
-{articles_text}"""
+    For each entry, summarize why it's a lead for a QS (e.g., project scale, cost, or land sale).
 
-    # --- THE GOOGLE-SPECIFIC URL LOGIC ---
-    # Google's OpenAI shim is very sensitive to the structure: 
-    # {base_url}/chat/completions
-    # If base_url is '.../v1beta/openai/', the final must be '.../v1beta/openai/chat/completions'
-    base_url = LLM_BASE_URL.strip().rstrip('/')
-    api_url = f"{base_url}/chat/completions"
+    Articles to analyze:
+    {articles_text}"""
+
+    # URL Logic Fix (Google v1beta)
+    api_url = f"{LLM_BASE_URL.strip().rstrip('/')}/chat/completions"
 
     try:
-        log.info(f"Connecting to Gemini at: {api_url}")
-        # Note: We use a standard POST request. 
-        # Ensure the 'model' matches exactly 'gemini-3-flash-preview' or 'gemini-3-flash'
         resp = httpx.post(
             api_url,
-            headers={
-                "Authorization": f"Bearer {LLM_API_KEY}",
-                "Content-Type": "application/json"
-            },
+            headers={"Authorization": f"Bearer {LLM_API_KEY}", "Content-Type": "application/json"},
             json={
-                "model": LLM_MODEL, # Should be gemini-3-flash-preview
+                "model": LLM_MODEL,
                 "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.2,
             },
             timeout=150,
         )
-        
-        # If this still returns 404, the log will tell us exactly what URL it tried
         resp.raise_for_status()
         return resp.json()["choices"][0]["message"]["content"].strip()
     except Exception as e:
-        log.error(f"AI Summary Error at {api_url}: {e}")
         return f"Error generating summary: {e}"
+
 # ---------------------------------------------------------------------------
-# 4. Email & Main Execution
+# 4. Email & Execution
 # ---------------------------------------------------------------------------
 def send_email(content: str):
     import smtplib
@@ -155,26 +125,30 @@ def send_email(content: str):
     msg = MIMEMultipart()
     msg['From'] = f"{SENDER_NAME} <{SENDER_EMAIL}>"
     msg['To'] = EMAIL_TO
-    msg['Subject'] = get_lang_config()["subject_template"].format(date=datetime.now().strftime('%Y-%m-%d'))
+    msg['Subject'] = f"NM Industry Digest — {datetime.now().strftime('%Y-%m-%d')}"
     msg.attach(MIMEText(content, 'plain'))
 
     with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
         server.starttls()
         server.login(SMTP_USER, SMTP_PASS)
         server.send_message(msg)
-    log.info("✅ Email sent successfully!")
+    log.info("✅ Full Multi-Source Digest sent!")
 
 def main():
-    log.info("=== Starting Northern Metropolis & HK Industry News Funnel ===")
+    log.info("=== Starting Multi-Source NM Industry News Funnel ===")
     
-    # FETCH NEWS
     all_entries = []
-    all_entries.extend(fetch_hksar_press_releases("en"))
-    all_entries.extend(fetch_hksar_press_releases("zh")) # zh is the code for TC
     
-    log.info(f"Total entries scraped: {len(all_entries)}")
+    # --- GOV SOURCES ---
+    all_entries.extend(fetch_news("https://www.info.gov.hk/gia/rss/general_en.xml", "GovHK EN", source_type="gov"))
+    all_entries.extend(fetch_news("https://www.info.gov.hk/gia/rss/general_zh.xml", "GovHK TC", source_type="gov"))
+    
+    # --- MEDIA SOURCES ---
+    all_entries.extend(fetch_news("https://www.scmp.com/rss/96/feed", "SCMP Property", source_type="media"))
+    all_entries.extend(fetch_news("https://news.mingpao.com/rss/ins/all.xml", "Ming Pao", source_type="media"))
+    all_entries.extend(fetch_news("https://www.thestandard.com.hk/rss/news_section/1", "The Standard", source_type="media"))
 
-    # FILTER NEWS (Geographic or Tender-based)
+    # FILTERING LOGIC
     NM_MARKERS = ["Northern Metropolis", "北部都會區", "San Tin", "新田", "Hung Shui Kiu", "洪水橋", "Kwu Tung", "古洞", "Fanling", "粉嶺"]
     BIZ_MARKERS = ["Tender", "招標", "Contract", "合約", "GFA", "樓面面積", "Land Sale", "賣地", "Consultancy", "顧問"]
 
@@ -184,17 +158,15 @@ def main():
         if any(m.lower() in text for m in NM_MARKERS) or any(m.lower() in text for m in BIZ_MARKERS):
             filtered.append(e)
     
-    log.info(f"Filtered leads: {len(filtered)}")
+    log.info(f"Total Scraped: {len(all_entries)} | Filtered Leads: {len(filtered)}")
 
-    # PROCESS & SEND
     if filtered:
         digest = summarize(filtered)
         send_email(digest)
     elif all_entries:
-        status_msg = f"Scan completed. No NM leads or Tenders found among {len(all_entries)} articles today."
-        send_email(status_msg)
+        send_email(f"System Status: No leads found among {len(all_entries)} articles today.")
     else:
-        log.warning("No data scraped. Check internet or source URLs.")
+        log.warning("No data gathered from any source.")
 
 if __name__ == "__main__":
     main()
