@@ -114,7 +114,6 @@ def fetch_rss(url, source_name, source_type):
 
                 entries.append({
                     "title": e.get("title", ""), 
-                    "body": e.get("summary", ""), # Captured here for the main() filter to use
                     "link": e.get("link", ""), 
                     "source_type": source_type, 
                     "source_name": source_name
