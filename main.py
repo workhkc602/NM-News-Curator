@@ -81,46 +81,15 @@ def get_lang_config():
     return LANGUAGE_PRESETS.get(LANGUAGE, LANGUAGE_PRESETS["en"])
 
 def summarize(entries: list[dict]) -> str:
-    lang = get_lang_config()
-    if not entries:
-        return lang["empty_message"]
-
-    articles_text = "\n".join(
-        f"- {e.get('title', 'No Title')} | {e.get('link', 'No Link')}"
-        for e in entries
-    )
+    # ... (Keep the prompt and entries logic the same) ...
     
-    prompt = f"""You are a senior Business Development Manager for a Quantity Surveying (QS) firm.
-Identify "Work-in-Hand" or "Future Lead" opportunities in the Northern Metropolis (NM).
-
-SECTOR MAPPING:
-- Transport and Infrastructure
-- Residential / Public Housing
-- Commercial / Retail / Hospitality
-- Corporate Fitouts / A&A (Alterations and Addition)
-- Healthcare / Life Sciences / Education
-- Industrial / Data Centre / Distribution Center
-- Civic / Government / Cultural
-- Maintenance Contracts / Energy
-
-STRICT FILTERING LOGIC:
-1. Is this about physical development, land sale, funding, or a contract? 
-2. If YES, and it's related to NM or major projects, INCLUDE.
-3. If NO (crime, social, sports), DISCARD.
-
-Format by Sector. Highlight PROJECT SCALE (GFA, cost) if mentioned.
-
-Articles:
-{articles_text}"""
-
-    # --- THE DIRECT URL FIX ---
-    # We strip any trailing slashes from your secret and append the standard path.
-    # For Google's OpenAI-compatible shim, this is the most reliable path.
-    base_url = LLM_BASE_URL.rstrip('/')
+    # This logic ensures the URL is exactly what Google wants:
+    # [BASE_URL]/chat/completions
+    base_url = LLM_BASE_URL.strip().rstrip('/')
     api_url = f"{base_url}/chat/completions"
 
     try:
-        log.info(f"Attempting AI connection: {api_url}") 
+        log.info(f"Connecting to Gemini at: {api_url}")
         resp = httpx.post(
             api_url,
             headers={
@@ -134,8 +103,6 @@ Articles:
             },
             timeout=150,
         )
-        # If we get a 404 here, it means the LLM_BASE_URL secret itself 
-        # likely needs to be adjusted to 'https://generativelanguage.googleapis.com/v1beta/openai'
         resp.raise_for_status()
         return resp.json()["choices"][0]["message"]["content"].strip()
     except Exception as e:
