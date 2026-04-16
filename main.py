@@ -91,23 +91,36 @@ def summarize(entries: list[dict]) -> str:
     )
     
     prompt = f"""You are a senior Business Development Manager for a Quantity Surveying (QS) firm.
-Categorize these news leads into sectors (Infrastructure, Housing, A&A, etc.) for the Northern Metropolis.
-Focus on GFA and project scale.
+Identify "Work-in-Hand" or "Future Lead" opportunities in the Northern Metropolis (NM).
+
+SECTOR MAPPING:
+- Transport and Infrastructure
+- Residential / Public Housing
+- Commercial / Retail / Hospitality
+- Corporate Fitouts / A&A (Alterations and Addition)
+- Healthcare / Life Sciences / Education
+- Industrial / Data Centre / Distribution Center
+- Civic / Government / Cultural
+- Maintenance Contracts / Energy
+
+STRICT FILTERING LOGIC:
+1. Is this about physical development, land sale, funding, or a contract? 
+2. If YES, and it's related to NM or major projects, INCLUDE.
+3. If NO (crime, social, sports), DISCARD.
+
+Format by Sector. Highlight PROJECT SCALE (GFA, cost) if mentioned.
 
 Articles:
 {articles_text}"""
 
-    # --- THE CRITICAL URL FIX ---
-    # Most OpenAI-compatible wrappers for Gemini require the /v1 suffix.
-    # We clean the base URL and ensure it points to the standard chat endpoint.
+    # --- THE DIRECT URL FIX ---
+    # We strip any trailing slashes from your secret and append the standard path.
+    # For Google's OpenAI-compatible shim, this is the most reliable path.
     base_url = LLM_BASE_URL.rstrip('/')
-    if not base_url.endswith('/v1'):
-        api_url = f"{base_url}/v1/chat/completions"
-    else:
-        api_url = f"{base_url}/chat/completions"
+    api_url = f"{base_url}/chat/completions"
 
     try:
-        log.info(f"Connecting to AI at: {api_url}") 
+        log.info(f"Attempting AI connection: {api_url}") 
         resp = httpx.post(
             api_url,
             headers={
@@ -121,6 +134,8 @@ Articles:
             },
             timeout=150,
         )
+        # If we get a 404 here, it means the LLM_BASE_URL secret itself 
+        # likely needs to be adjusted to 'https://generativelanguage.googleapis.com/v1beta/openai'
         resp.raise_for_status()
         return resp.json()["choices"][0]["message"]["content"].strip()
     except Exception as e:
