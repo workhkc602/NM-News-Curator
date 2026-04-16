@@ -32,7 +32,7 @@ SMTP_PASS = get_env("SMTP_PASS")
 EMAIL_TO = get_env("EMAIL_TO")
 SENDER_EMAIL = get_env("SENDER_EMAIL")
 SENDER_NAME = get_env("SENDER_NAME", "NM News Curator")
-
+HOURS_LOOKBACK = int(get_env("HOURS_LOOKBACK", "24"))
 # ---------------------------------------------------------------------------
 # 2. Advanced Keyword & Date Logic
 # ---------------------------------------------------------------------------
@@ -86,14 +86,41 @@ def is_expired(text):
 # ---------------------------------------------------------------------------
 # 3. Scraping & Data Gathering
 # ---------------------------------------------------------------------------
+from datetime import datetime, timedelta, timezone
+import time
+
 def fetch_rss(url, source_name, source_type):
     headers = {"User-Agent": "Mozilla/5.0"}
+    entries = []
+    now = datetime.now(timezone.utc)
+    threshold = now - timedelta(hours=HOURS_LOOKBACK)
+
     try:
         with httpx.Client(headers=headers, follow_redirects=True, timeout=20.0) as client:
             response = client.get(url)
             feed = feedparser.parse(response.content)
-            return [{"title": e.get("title", ""), "link": e.get("link", ""), "source_type": source_type, "source_name": source_name} for e in feed.entries]
-    except: return []
+            
+            for e in feed.entries:
+                # Convert RSS time to a Python datetime object
+                published_time = None
+                if hasattr(e, 'published_parsed') and e.published_parsed:
+                    published_time = datetime.fromtimestamp(time.mktime(e.published_parsed), timezone.utc)
+                
+                # If we have a date, check if it's within our HOURS_LOOKBACK
+                if published_time and published_time < threshold:
+                    continue 
+
+                entries.append({
+                    "title": e.get("title", ""), 
+                    "body": e.get("summary", ""), # Captured here for the main() filter to use
+                    "link": e.get("link", ""), 
+                    "source_type": source_type, 
+                    "source_name": source_name
+                })
+        return entries
+    except Exception as e:
+        log.error(f"Error fetching {source_name}: {e}")
+        return []
 
 def fetch_html_tenders(url, source_name):
     headers = {"User-Agent": "Mozilla/5.0"}
@@ -219,14 +246,25 @@ def main():
     except Exception as e:
         log.error(f"Failed to load sources.json: {e}")
 
-    # --- PART C: Filter for NM Relevance ---
-    # Tenders are pre-filtered in fetch_html_tenders. 
-    # News/YouTube are filtered here against NM_MARKERS.
-    filtered = [
-        e for e in all_entries 
-        if e['source_type'] == 'tender' or any(m.lower() in e['title'].lower() for m in NM_MARKERS)
-    ]
+   # --- PART C: Filter for NM Relevance (Enhanced Title + Body Search) ---
+    filtered = []
     
+    for e in all_entries:
+        # 1. Always keep Tenders (they are already filtered by markers in fetch_html_tenders)
+        if e['source_type'] == 'tender':
+            filtered.append(e)
+            continue
+            
+        # 2. For News/YouTube, check BOTH Title and Body/Summary
+        # We combine them into one search string to scan for markers
+        search_text = (e.get('title', '') + " " + e.get('body', '')).lower()
+        
+        if any(marker.lower() in search_text for marker in NM_MARKERS):
+            # Remove the 'body' before sending to AI to keep the prompt clean and save tokens
+            e.pop('body', None) 
+            filtered.append(e)
+    
+    # --- Final Processing ---
     if filtered:
         digest = summarize(filtered)
         send_email(digest)
