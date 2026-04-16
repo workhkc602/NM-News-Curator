@@ -1,250 +1,92 @@
-# AI News Curator
+# Northern Metropolis (NM) News Curator
 
-A lightweight daily AI news digest that runs as a cron job. It fetches articles from RSS feeds (tech media, AI company blogs, YouTube channels), summarizes them using any AI model, and emails you the digest.
+A specialized Business Intelligence tool for **Quantity Surveyors** and **Construction Professionals**. This bot monitors the HKSAR Government, public institutions, and media to curate a daily pipeline of tender invitations, consultancy forecasts, and development news related to the **Northern Metropolis**.
 
-**Total cost: $0.** Works with free tiers of Groq, Gemini, OpenRouter, and more.
+**Total cost: $0.** Built to run on GitHub Actions free tier using Google Gemini (Free) or any OpenAI-compatible API.
 
 ## How It Works
 
 ```
-Cron (daily) → Fetch RSS feeds → Summarize with AI → Email you
+Cron (Daily) → Scrape Tender Portals & RSS → AI Precision Filtering → Email Partners
 ```
 
-1. **Fetch**: Pulls the latest articles from all sources in `sources.json` (RSS feeds, including YouTube channels)
-2. **Summarize**: Sends articles to any OpenAI-compatible LLM API for a concise digest
-3. **Email**: Delivers the formatted newsletter to your inbox
+1. **Scrape**: Monitors specific HTML tender portals (CEDD, HKHA, ArchSD, MTRC) and RSS feeds for "hidden" leads.
+2. **Filter**: Automatically omits expired tenders and applies a strict **NM Geography Filter** (San Tin, Kwu Tung, etc.).
+3. **AI Analyze**: Gemini processes the raw data through a **QS lens**, identifying cost planning and procurement opportunities.
+4. **Digest**: Delivers a formatted "Opportunity Pipeline Report" to your Senior Partners' inbox.
 
 ## Quick Start
 
-### 1. Get a free LLM API key
+### 1. Get a Free LLM API Key
 
-Pick **one** provider — all have free tiers:
+The bot is optimized for **Google Gemini 1.5 Flash** (1,500 requests/day for free).
+* Get your key at: [Google AI Studio](https://aistudio.google.com/)
+* **Base URL**: `https://generativelanguage.googleapis.com/v1beta/openai`
+* **Model**: `gemini-1.5-flash`
 
-| Provider | Free Tier | Base URL | Models |
-|----------|-----------|----------|--------|
-| **Groq** (recommended) | 6,000 req/day | `https://api.groq.com/openai/v1` | `llama-3.3-70b-versatile` |
-| **Google Gemini** | 1,500 req/day | `https://generativelanguage.googleapis.com/v1beta/openai` | `gemini-2.5-flash` |
-| **OpenRouter** | Free models available | `https://openrouter.ai/api/v1` | Various (check free tier) |
-| **Ollama** (local) | Unlimited | `http://localhost:11434/v1` | Any local model |
+### 2. Configure Environment
 
-### 2. Get a free email service
-
-Pick **one**:
-
-| Provider | Free Tier | `EMAIL_PROVIDER` value |
-|----------|-----------|----------------------|
-| **Brevo** (recommended) | 300 emails/day | `brevo` |
-| **Resend** | 100 emails/day | `resend` |
-| **SendGrid** | 100 emails/day | `sendgrid` |
-| **Any SMTP** (Gmail, Outlook, etc.) | Varies | `smtp` |
-
-### 3. Configure
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` with your chosen providers:
+Copy `.env.example` to `.env` and fill in your details:
 
 ```env
-# LLM
-LLM_API_KEY=your_key_here
-LLM_BASE_URL=https://api.groq.com/openai/v1
-LLM_MODEL=llama-3.3-70b-versatile
+# LLM Configuration
+LLM_API_KEY=your_gemini_key
+LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+LLM_MODEL=gemini-1.5-flash
 
-# Email
-EMAIL_PROVIDER=brevo
-EMAIL_API_KEY=your_email_key_here
-EMAIL_TO=you@example.com
-SENDER_EMAIL=noreply@yourdomain.com
-SENDER_NAME=AI News
-```
-
-<details>
-<summary>Using Gmail SMTP (no API key needed)</summary>
-
-If you don't want to sign up for an email service, use Gmail directly:
-
-1. Enable 2-Step Verification on your Google account
-2. Go to myaccount.google.com → Security → App passwords
-3. Generate an app password for "Mail"
-
-```env
+# Email (SMTP Recommended for Gmail)
 EMAIL_PROVIDER=smtp
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=you@gmail.com
-SMTP_PASS=your_app_password
+SMTP_PASS=your_gmail_app_password
+EMAIL_TO=partner1@firm.com, partner2@firm.com
 SENDER_EMAIL=you@gmail.com
-SENDER_NAME=AI News
-```
-</details>
-
-### 4. Customize Sources
-
-Edit `sources.json` to add or remove RSS feeds:
-
-```json
-[
-  {
-    "name": "TechCrunch AI",
-    "url": "https://techcrunch.com/category/artificial-intelligence/feed/",
-    "category": "tech-media"
-  }
-]
+SENDER_NAME=NM News Curator
 ```
 
-**To add a YouTube channel:** Find the channel ID (starts with `UC`) from the channel URL, then use:
-```
-https://www.youtube.com/feeds/videos.xml?channel_id=CHANNEL_ID_HERE
-```
+### 3. Customize the Pipeline
+The bot uses hardcoded logic in `main.py` for high-precision scraping:
+* **`NM_MARKERS`**: Includes districts like San Tin, Hung Shui Kiu, and project codes (YL/20, ND/20).
+* **`BIZ_MARKERS`**: Catches "Tender," "Consultancy," "Fit-out," and "Tenancy."
+* **`Strategic Focus Sectors`**: Organizes reports by Infrastructure, Housing, Healthcare, etc.
 
-### 5. Run Locally
+## Deployment
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python main.py
-```
+### GitHub Actions (Free & Automatic)
+This is the recommended way to run the bot daily at no cost.
 
-### 6. Deploy
+1. Fork this repo.
+2. Go to **Settings > Secrets and Variables > Actions**.
+3. Add the following **Secrets**:
+   * `LLM_API_KEY`, `SMTP_PASS`, etc. (See Configuration section).
+4. The bot will run automatically every day at 7:00 AM HKT (23:00 UTC).
 
-Pick any platform that supports cron jobs:
+## Sources Monitored
 
-<details>
-<summary>Railway (recommended)</summary>
+| Sector | Sources |
+| :--- | :--- |
+| **Government** | CEDD Northern Metropolis, ArchSD Consultancies, HKHA Business & Commercial |
+| **Infrastructure** | MTRC New Extensions, HSITP (Lok Ma Chau Loop) |
+| **Institutions** | HKBU, HSUHK, EdUHK (University Expansion Tenders) |
+| **Media** | SCMP, Ming Pao, GovHK (Press Releases) |
 
-1. Fork this repo to your GitHub account
-2. Create a new project on [railway.com](https://railway.com)
-3. Connect your GitHub repo (Railway auto-detects the Dockerfile)
-4. Set the service type to **Cron Job** with schedule: `0 23 * * *` (= 7am HKT)
-5. Add environment variables from your `.env`
+## Configuration Options
 
-</details>
-
-<details>
-<summary>Render</summary>
-
-1. Fork this repo to your GitHub account
-2. Create a new **Cron Job** on [render.com](https://render.com)
-3. Connect your GitHub repo
-4. Set the schedule to `0 23 * * *`
-5. Set the command to `python main.py`
-6. Add environment variables from your `.env`
-
-</details>
-
-<details>
-<summary>GitHub Actions (no extra account needed)</summary>
-
-Add `.github/workflows/news.yml` to your forked repo:
-
-```yaml
-name: AI News Curator
-on:
-  schedule:
-    - cron: '0 23 * * *'  # 7am HKT
-  workflow_dispatch: # manual trigger
-
-jobs:
-  run:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - run: pip install -r requirements.txt
-      - run: python main.py
-        env:
-          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-          LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
-          LLM_MODEL: ${{ secrets.LLM_MODEL }}
-          EMAIL_PROVIDER: ${{ secrets.EMAIL_PROVIDER }}
-          EMAIL_API_KEY: ${{ secrets.EMAIL_API_KEY }}
-          EMAIL_TO: ${{ secrets.EMAIL_TO }}
-          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
-          SENDER_NAME: ${{ secrets.SENDER_NAME }}
-          LANGUAGE: ${{ secrets.LANGUAGE }}
-```
-
-Then go to your repo → Settings → Secrets → add each variable.
-
-</details>
-
-<details>
-<summary>Local Mac/Linux (crontab)</summary>
-
-Add to your crontab (`crontab -e`):
-
-```
-0 7 * * * cd /path/to/AI-News-Curator && .venv/bin/python main.py
-```
-
-Make sure your `.env` is loaded — or export variables in the cron command.
-
-</details>
-
-## Configuration
-
-All configuration is via environment variables:
-
-### LLM
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `LLM_API_KEY` | Yes | — | API key for your LLM provider |
-| `LLM_BASE_URL` | No | `https://api.groq.com/openai/v1` | OpenAI-compatible API base URL |
-| `LLM_MODEL` | No | `llama-3.3-70b-versatile` | Model name |
-
-### Email
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `EMAIL_PROVIDER` | No | `brevo` | `brevo`, `resend`, `sendgrid`, or `smtp` |
-| `EMAIL_API_KEY` | Yes* | — | API key (* not needed for `smtp`) |
-| `EMAIL_TO` | Yes | — | Recipient email |
-| `SENDER_EMAIL` | Yes | — | Verified sender email |
-| `SENDER_NAME` | No | `AI News` | Sender display name |
-| `SMTP_HOST` | smtp only | — | SMTP server hostname |
-| `SMTP_PORT` | smtp only | `587` | SMTP port |
-| `SMTP_USER` | smtp only | — | SMTP username |
-| `SMTP_PASS` | smtp only | — | SMTP password |
-
-### General
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `LANGUAGE` | No | `zh-HK` | Newsletter language (see below) |
-| `HOURS_LOOKBACK` | No | `26` | How many hours back to fetch |
-| `SOURCES_FILE` | No | `sources.json` | Path to sources file |
-| `TZ_OFFSET` | No | `8` | Your timezone offset from UTC |
-
-### Language Options
-
-| Value | Language |
-|-------|----------|
-| `zh-HK` | 香港書面中文 (Hong Kong Written Chinese) |
-| `zh-TW` | 繁體中文 (Traditional Chinese, Taiwan) |
-| `zh-CN` | 简体中文 (Simplified Chinese) |
-| `en` | English |
-| `ja` | 日本語 (Japanese) |
-
-Or set `LANGUAGE` to any custom value (e.g. `Korean`, `French`, `Thai`) and the LLM will write in that language.
+| Variable | Description |
+| :--- | :--- |
+| `LANGUAGE` | Default: `en` (English). Also supports `zh-HK`. |
+| `HOURS_LOOKBACK` | Default: `26`. Only fetches fresh news since the last run. |
+| `NM_GEOGRAPHY` | (Internal) Filters for 20+ specific Northern Metropolis locations. |
 
 ## Project Structure
-
-```
-ai-news-curator/
-├── main.py           # Main script
-├── sources.json      # RSS feed sources (edit this!)
-├── requirements.txt  # Python dependencies (just 2)
-├── Dockerfile        # For Docker / Railway deployment
-├── .env.example      # Environment variable template
+```text
+nm-news-curator/
+├── main.py           # Logic for Scraper, Expiry Filter, and AI Summarizer
+├── requirements.txt  # Dependencies (httpx, beautifulsoup4, feedparser, lxml)
+├── .github/          # GitHub Actions workflow for 7am HKT cron job
 └── README.md
 ```
 
 ## License
-
-MIT — do whatever you want with it.
+MIT — For the advancement of the construction industry.
