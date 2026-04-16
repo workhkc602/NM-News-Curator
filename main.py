@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# 1. Configuration
+# 1. Configuration (GitHub Secrets)
 # ---------------------------------------------------------------------------
 def get_env(name: str, default: str = None):
     value = os.environ.get(name)
@@ -34,157 +34,156 @@ SENDER_EMAIL = get_env("SENDER_EMAIL")
 SENDER_NAME = get_env("SENDER_NAME", "NM News Curator")
 
 # ---------------------------------------------------------------------------
-# 2. Date Filtering Logic (Smart Omission)
+# 2. Advanced Keyword & Date Logic
 # ---------------------------------------------------------------------------
+NM_MARKERS = [
+    # Strategic & High Level
+    "Northern Metropolis", "北部都會區", "Four Zones", "NM Highway", "Metropolis Highway",
+    # Specific Hubs & Functional Zones
+    "San Tin Technopole", "新田科技城", "Innovation and Technology Zone", "I&T Zone",
+    "High-end Professional Services", "Logistics Hub", "Boundary Commerce",
+    "Blue and Green Recreation", "University Town", "大學城", "UniTown",
+    # NDAs & Specific Locations
+    "Kwu Tung", "古洞", "Fanling North", "粉嶺北", "Hung Shui Kiu", "洪水橋", "HSK",
+    "Ha Tsuen", "廈村", "Yuen Long South", "元朗南", "Lok Ma Chau", "落馬洲", "Hetao", "河套",
+    "HSITP", "Ngau Tam Mei", "牛潭尾", "Ma Tso Lung", "馬草壟", "Sandy Ridge", "沙嶺",
+    "Lau Fau Shan", "流浮山", "New Territories North", "新界北",
+    # Infrastructure & Project Codes
+    "Northern Link", "北環綫", "NOL", "Central Rail Link", "中鐵綫", "Western Railway",
+    "YL/20", "ND/20", "CE 16/20", "CE 8/20", "CE 9/20", "CE 14/20", "SS R50"
+]
+
+BIZ_MARKERS = [
+    "Tender", "招標", "Contract", "合約", "Consultancy", "顧問", "EOI", "Forecast",
+    "Expression of Interest", "Technical and Fee Proposal", "Land Sale", "賣地", "片區開發"
+]
+
 def is_expired(text):
-    """
-    Checks if a string contains a date that has already passed.
-    This helps filter out 'Closing Dates' that are in the past.
-    """
-    # Look for common date formats like DD/MM/YYYY, YYYY-MM-DD, or DD Mon YYYY
+    """Filters out leads with closing dates already in the past."""
     date_patterns = [
-        r'(\d{1,2})[\/\-\. ](\d{1,2})[\/\-\. ](\d{4})',  # 28/04/2026
-        r'(\d{4})[\/\-\. ](\d{1,2})[\/\-\. ](\d{1,2})',  # 2026-04-28
-        r'(\d{1,2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{4})' # 28 Apr 2026
+        r'(\d{1,2})[\/\-\. ](\d{1,2})[\/\-\. ](\d{4})',
+        r'(\d{4})[\/\-\. ](\d{1,2})[\/\-\. ](\d{1,2})',
+        r'(\d{1,2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{4})'
     ]
-    
-    today = datetime.now()
-    
+    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     for pattern in date_patterns:
-        matches = re.findall(pattern, text)
+        matches = re.findall(pattern, text, re.IGNORECASE)
         for match in matches:
             try:
-                # Basic parsing attempt
-                if len(match[1]) > 2: # Month name version
-                    dt_str = f"{match[0]} {match[1]} {match[2]}"
-                    found_date = datetime.strptime(dt_str, "%d %b %Y")
+                if len(match[1]) > 2: # Mon Name
+                    dt = datetime.strptime(f"{match[0]} {match[1]} {match[2]}", "%d %b %Y")
                 elif len(match[0]) == 4: # YYYY-MM-DD
-                    found_date = datetime.strptime(f"{match[0]}-{match[1]}-{match[2]}", "%Y-%m-%d")
-                else: # DD/MM/YYYY
-                    found_date = datetime.strptime(f"{match[0]}-{match[1]}-{match[2]}", "%d-%m-%Y")
-                
-                if found_date < today.replace(hour=0, minute=0, second=0, microsecond=0):
-                    return True
-            except:
-                continue
+                    dt = datetime.strptime(f"{match[0]}-{match[1]}-{match[2]}", "%Y-%m-%d")
+                else: # DD-MM-YYYY
+                    dt = datetime.strptime(f"{match[0]}-{match[1]}-{match[2]}", "%d-%m-%Y")
+                if dt < today: return True
+            except: continue
     return False
 
 # ---------------------------------------------------------------------------
-# 3. Robust Scraper
+# 3. Scraping & Data Gathering
 # ---------------------------------------------------------------------------
+def fetch_rss(url, source_name, source_type):
+    headers = {"User-Agent": "Mozilla/5.0"}
+    try:
+        with httpx.Client(headers=headers, follow_redirects=True, timeout=20.0) as client:
+            response = client.get(url)
+            feed = feedparser.parse(response.content)
+            return [{"title": e.get("title", ""), "link": e.get("link", ""), "source_type": source_type, "source_name": source_name} for e in feed.entries]
+    except: return []
+
 def fetch_html_tenders(url, source_name):
-    headers = {"User-Agent": "Mozilla/5.0 Chrome/120.0.0.0 Safari/537.36"}
+    headers = {"User-Agent": "Mozilla/5.0"}
     entries = []
     try:
         with httpx.Client(headers=headers, follow_redirects=True, timeout=30.0) as client:
             response = client.get(url)
-            response.raise_for_status()
             soup = BeautifulSoup(response.text, 'lxml')
-            
-            # Focused search for QS/Tender keywords
-            keywords = ["tender", "contract", "consultancy", "eoi", "forecast", "qs", "quantity surveyor", "招標", "顧問"]
-            
-            for link_tag in soup.find_all('a', href=True):
-                text = link_tag.get_text().strip()
-                href = link_tag['href']
-                
-                # Validation: Link must contain keyword and NOT be expired
-                if any(k.lower() in text.lower() for k in keywords) and len(text) > 10:
-                    if is_expired(text):
-                        continue # Skip if date is in the past
+            for tag in soup.find_all('a', href=True):
+                text = tag.get_text().strip()
+                href = tag['href']
+                # Must be Tender-related AND NM-related
+                if any(k.lower() in text.lower() for k in BIZ_MARKERS) and len(text) > 10:
+                    if any(m.lower() in text.lower() for m in NM_MARKERS):
+                        if is_expired(text): continue
                         
-                    full_url = urljoin(url, href)
-                    
-                    # 404 Guard: Quick check if link is alive
-                    try:
-                        # We use HEAD request to save bandwidth
-                        link_check = client.head(full_url, timeout=5.0)
-                        if link_check.status_code >= 400: continue 
-                    except:
-                        continue
+                        full_url = urljoin(url, href)
+                        # 404 Guard
+                        try:
+                            check = client.head(full_url, timeout=5.0)
+                            if check.status_code >= 400: continue
+                        except: continue
 
-                    entries.append({
-                        "title": text,
-                        "link": full_url,
-                        "source_type": "tender",
-                        "source_name": source_name
-                    })
+                        entries.append({"title": text, "link": full_url, "source_type": "tender", "source_name": source_name})
         return entries
-    except Exception as e:
-        log.error(f"Error scraping {source_name}: {e}")
-        return []
+    except: return []
 
 # ---------------------------------------------------------------------------
-# 4. AI & Summary Logic
+# 4. AI Summarization & Email
 # ---------------------------------------------------------------------------
-def summarize(entries: list[dict]) -> str:
+def summarize(entries):
     articles_text = ""
     for e in entries:
-        articles_text += f"TYPE: {e['source_type'].upper()} | SRC: {e['source_name']}\nTITLE: {e['title']}\nURL: {e['link']}\n\n"
+        articles_text += f"[{e['source_type'].upper()}] {e['source_name']}: {e['title']}\nURL: {e['link']}\n\n"
 
     prompt = f"""You are a senior Business Development Manager for a QS firm.
-    
-    START with Header:
-    To: Senior Partners / Board of Directors
-    From: NM News Curator
-    Date: {datetime.now().strftime('%B %d, %Y')}
+    Header: From: NM News Curator | Date: {datetime.now().strftime('%B %d, %Y')}
     Subject: Northern Metropolis (NM) & Major Projects: Opportunity Pipeline Report
 
-    ---
-
-    CATEGORIES:
-    1. "### Upcoming Tenders & Consultancy Notices"
+    INSTRUCTIONS:
+    1. "### Upcoming Tenders & Consultancy Notices" (Tenders/Forecasts)
     2. "### HKSAR Gov Press Releases"
     3. "### NM Development News from Various Media"
 
-    SECTOR GROUPING (For 2 & 3):
-    - Transport and Infrastructure, Residential / Public Housing, Commercial / Corporate Fitouts, etc.
+    RULES:
+    - Omit expired dates. Focus on why it is a QS lead.
+    - NEW LINE for links. Format: [View Source Detail >](URL)
+    - Group category 2 & 3 by: Transport, Residential, Commercial, Retail, Healthcare, Industrial, Maintenance.
 
-    READABILITY & QUALITY RULES:
-    - Omit any entry that has a deadline/closing date in the past (before {datetime.now().strftime('%Y-%m-%d')}).
-    - Summarize WHY it is a QS lead (cost planning, measurement, contract advisory).
-    - FORCE A NEW LINE for the link. Format: [View Source Detail >](URL)
-    - Add an empty line between bullets.
-    
     Articles:
     {articles_text}"""
 
     try:
-        resp = httpx.post(
-            f"{LLM_BASE_URL.strip().rstrip('/')}/chat/completions",
+        resp = httpx.post(f"{LLM_BASE_URL.strip().rstrip('/')}/chat/completions",
             headers={"Authorization": f"Bearer {LLM_API_KEY}", "Content-Type": "application/json"},
-            json={"model": LLM_MODEL, "messages": [{"role": "user", "content": prompt}], "temperature": 0.1},
-            timeout=150
-        )
+            json={"model": LLM_MODEL, "messages": [{"role": "user", "content": prompt}], "temperature": 0.1}, timeout=150)
         return resp.json()["choices"][0]["message"]["content"].strip()
-    except Exception as e:
-        return f"Error: {e}"
+    except Exception as e: return f"Error: {e}"
 
-# ---------------------------------------------------------------------------
-# 5. Execution
-# ---------------------------------------------------------------------------
+def send_email(content):
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+    msg = MIMEMultipart(); msg['From'] = f"{SENDER_NAME} <{SENDER_EMAIL}>"
+    msg['To'] = EMAIL_TO; msg['Subject'] = f"NM Industry Digest — {datetime.now().strftime('%Y-%m-%d')}"
+    msg.attach(MIMEText(content, 'plain'))
+    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+        server.starttls(); server.login(SMTP_USER, SMTP_PASS); server.send_message(msg)
+
 def main():
+    log.info("Starting NM-Omni Scraper...")
     all_entries = []
-    
-    # Updated HKHA Link and standard lists
-    tender_targets = [
+    # Tender Targets
+    targets = [
         ("CEDD NM", "https://www.cedd.gov.hk/eng/our-projects/northern-metropolis/index.html"),
         ("HKHA Commercial", "https://www.housingauthority.gov.hk/en/commercial-properties/tender-notices-and-awards/index.html"),
-        ("ArchSD QS", "https://www.archsd.gov.hk/en/tenders-notices/consultancies/notices-of-invitation-for-technical-and-fee-proposal.html"),
-        ("MTRC Tenders", "https://www.mtr.com.hk/en/corporate/tenders/new_projects.html"),
-        ("HSITP Projects", "https://www.hsitp.org/en/tender-notices")
+        ("ArchSD Consultancies", "https://www.archsd.gov.hk/en/tenders-notices/consultancies/notices-of-invitation-for-technical-and-fee-proposal.html"),
+        ("MTRC Projects", "https://www.mtr.com.hk/en/corporate/tenders/new_projects.html"),
+        ("HSITP Loop", "https://www.hsitp.org/en/tender-notices")
     ]
+    for n, u in targets: all_entries.extend(fetch_html_tenders(u, n))
     
-    for name, url in tender_targets:
-        all_entries.extend(fetch_html_tenders(url, name))
+    # RSS News
+    all_entries.extend(fetch_rss("https://www.info.gov.hk/gia/rss/general_en.xml", "GovHK", "gov"))
+    all_entries.extend(fetch_rss("https://www.scmp.com/rss/96/feed", "SCMP", "media"))
+    all_entries.extend(fetch_rss("https://news.mingpao.com/rss/ins/all.xml", "Ming Pao", "media"))
 
-    # Standard RSS Feeds
-    # ... (Add your fetch_rss calls here as per previous versions) ...
+    # Final Filter for News (Tenders already filtered in fetch)
+    filtered = [e for e in all_entries if e['source_type'] == 'tender' or any(m.lower() in e['title'].lower() for m in NM_MARKERS)]
+    
+    if filtered:
+        digest = summarize(filtered)
+        send_email(digest)
+        log.info("✅ Digest Sent.")
 
-    if all_entries:
-        digest = summarize(all_entries)
-        # Send Email logic here
-        print(digest) # For local testing
-
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__": main()
