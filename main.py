@@ -234,17 +234,29 @@ def main():
         log.info(f"Scraping Tender Portal: {name}")
         all_entries.extend(fetch_html_tenders(url, name))
 
-    # --- PART B: News & YouTube (Dynamic RSS from JSON) ---
-    # This reads your sources.json file and loops through every entry
+# --- PART B: News & YouTube (Updated for GitHub Actions) ---
     try:
-        sources_path = os.path.join(os.path.dirname(__file__), 'sources.json')
+        # This line ensures it finds the file regardless of where the script is called from
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        sources_path = os.path.join(base_dir, 'sources.json')
+        
         with open(sources_path, 'r', encoding='utf-8') as f:
             rss_sources = json.load(f)
+            log.info(f"Loaded {len(rss_sources)} sources from JSON.") # Helpful log
             for source in rss_sources:
-                log.info(f"Fetching RSS/YouTube: {source['name']}")
                 all_entries.extend(fetch_rss(source['url'], source['name'], source['category']))
+    except FileNotFoundError:
+        log.error(f"CRITICAL: sources.json not found at {sources_path}")
     except Exception as e:
-        log.error(f"Failed to load sources.json: {e}")
+        log.error(f"Error loading sources: {e}")
+
+    log.info(f"Total entries collected before filtering: {len(all_entries)}")
+    
+    # --- PART C: Filter ---
+    filtered = []
+    # ... your existing loop ...
+    
+    log.info(f"Total entries after filtering: {len(filtered)}")
 
    # --- PART C: Filter for NM Relevance (Enhanced Title + Body Search) ---
     filtered = []
