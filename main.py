@@ -85,13 +85,11 @@ def summarize(entries: list[dict]) -> str:
     if not entries:
         return lang["empty_message"]
 
-    # This creates the list of articles for the AI to read
     articles_text = "\n".join(
         f"- {e.get('title', 'No Title')} | {e.get('link', 'No Link')}"
         for e in entries
     )
     
-    # This is the "prompt" variable that was missing!
     prompt = f"""You are a senior Business Development Manager for a Quantity Surveying (QS) firm.
 Identify "Work-in-Hand" or "Future Lead" opportunities in the Northern Metropolis (NM).
 
@@ -112,15 +110,20 @@ STRICT FILTERING LOGIC:
 
 Format by Sector. Highlight PROJECT SCALE (GFA, cost) if mentioned.
 
-Articles to analyze:
+Articles:
 {articles_text}"""
 
-    # Ensure the URL is exactly what Google wants
+    # --- THE GOOGLE-SPECIFIC URL LOGIC ---
+    # Google's OpenAI shim is very sensitive to the structure: 
+    # {base_url}/chat/completions
+    # If base_url is '.../v1beta/openai/', the final must be '.../v1beta/openai/chat/completions'
     base_url = LLM_BASE_URL.strip().rstrip('/')
     api_url = f"{base_url}/chat/completions"
 
     try:
         log.info(f"Connecting to Gemini at: {api_url}")
+        # Note: We use a standard POST request. 
+        # Ensure the 'model' matches exactly 'gemini-3-flash-preview' or 'gemini-3-flash'
         resp = httpx.post(
             api_url,
             headers={
@@ -128,16 +131,18 @@ Articles to analyze:
                 "Content-Type": "application/json"
             },
             json={
-                "model": LLM_MODEL,
+                "model": LLM_MODEL, # Should be gemini-3-flash-preview
                 "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.2,
             },
             timeout=150,
         )
+        
+        # If this still returns 404, the log will tell us exactly what URL it tried
         resp.raise_for_status()
         return resp.json()["choices"][0]["message"]["content"].strip()
     except Exception as e:
-        log.error(f"AI Summary Error: {e}")
+        log.error(f"AI Summary Error at {api_url}: {e}")
         return f"Error generating summary: {e}"
 # ---------------------------------------------------------------------------
 # 4. Email & Main Execution
