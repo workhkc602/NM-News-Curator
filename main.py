@@ -91,22 +91,29 @@ def summarize(entries: list[dict]) -> str:
     )
     
     prompt = f"""You are a senior Business Development Manager for a Quantity Surveying (QS) firm.
-Categorize these 15 news leads into sectors (Infrastructure, Housing, A&A, etc.) for the Northern Metropolis.
+Categorize these news leads into sectors (Infrastructure, Housing, A&A, etc.) for the Northern Metropolis.
 Focus on GFA and project scale.
 
 Articles:
 {articles_text}"""
 
-    # --- CLEAN URL LOGIC ---
-    # This ensures we don't end up with "v1beta/openai//chat/completions"
-    base_url = LLM_BASE_URL.rstrip('/') 
-    api_url = f"{base_url}/chat/completions"
+    # --- THE CRITICAL URL FIX ---
+    # Most OpenAI-compatible wrappers for Gemini require the /v1 suffix.
+    # We clean the base URL and ensure it points to the standard chat endpoint.
+    base_url = LLM_BASE_URL.rstrip('/')
+    if not base_url.endswith('/v1'):
+        api_url = f"{base_url}/v1/chat/completions"
+    else:
+        api_url = f"{base_url}/chat/completions"
 
     try:
-        log.info(f"Connecting to AI at: {api_url}") # This helps us debug the log
+        log.info(f"Connecting to AI at: {api_url}") 
         resp = httpx.post(
             api_url,
-            headers={"Authorization": f"Bearer {LLM_API_KEY}"},
+            headers={
+                "Authorization": f"Bearer {LLM_API_KEY}",
+                "Content-Type": "application/json"
+            },
             json={
                 "model": LLM_MODEL,
                 "messages": [{"role": "user", "content": prompt}],
