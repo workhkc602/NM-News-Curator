@@ -127,7 +127,11 @@ def summarize(entries):
         articles_text += f"[{e['source_type'].upper()}] {e['source_name']}: {e['title']}\nURL: {e['link']}\n\n"
 
     prompt = f"""You are a senior Business Development Manager for a QS firm.
-    Header: From: NM News Curator | Date: {datetime.now().strftime('%B %d, %Y')}
+  
+    START with Header:
+    To: Senior Partners / Board of Directors
+    From: NM News Curator
+    Date: {datetime.now().strftime('%B %d, %Y')}
     Subject: Northern Metropolis (NM) & Major Projects: Opportunity Pipeline Report
 
     INSTRUCTIONS:
@@ -136,9 +140,21 @@ def summarize(entries):
     3. "### NM Development News from Various Media"
 
     RULES:
-    - Omit expired dates. Focus on why it is a QS lead.
-    - NEW LINE for links. Format: [View Source Detail >](URL)
-    - Group category 2 & 3 by: Transport, Residential, Commercial, Retail, Healthcare, Industrial, Maintenance.
+    - Use bullet points for each entry.
+    - Summarize the QS Lead first.
+    - FORCE A NEW LINE after the summary text.
+    - Omit expired dates. Suggest why it is a QS lead.
+    - Place the link on its own line using this format: [View Source Detail >](URL)
+    - Add an extra empty line** between different bullet points to prevent "text walls."
+
+    Inside categories 2 and 3, group by:
+    - Transport and Infrastructure
+    - Residential / Public Housing
+    - Commercial / Corporate Fitouts
+    - Retail / Hospitality
+    - Healthcare / Education
+    - Industrial / Data Centre
+    - Maintenance / Energy
 
     Articles:
     {articles_text}"""
