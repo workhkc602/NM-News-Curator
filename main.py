@@ -54,8 +54,11 @@ NM_MARKERS = [
 ]
 
 BIZ_MARKERS = [
-    "Tender", "招標", "Contract", "合約", "Consultancy", "顧問", "EOI", "Forecast",
-    "Expression of Interest", "Technical and Fee Proposal", "Land Sale", "賣地", "片區開發"
+   "Tender", "招標", "Contract", "合約", "Consultancy", "顧問", 
+    "EOI", "Forecast", "Expression of Interest", "Technical and Fee Proposal", 
+    "Land Sale", "賣地", "片區開發", "Fitting-out", "Fit-out", "Renovation", 
+    "翻新", "Tenancy", "租賃", "License", "牌照", "Design and Build", "D&B", 
+    "Alteration", "Addition", "A&A", "Maintenance", "Repair"
 ]
 
 def is_expired(text):
@@ -134,27 +137,31 @@ def summarize(entries):
     Date: {datetime.now().strftime('%B %d, %Y')}
     Subject: Northern Metropolis (NM) & Major Projects: Opportunity Pipeline Report
 
-    INSTRUCTIONS:
-    1. "### Upcoming Tenders & Consultancy Notices" (Tenders/Forecasts)
-    2. "### HKSAR Gov Press Releases"
-    3. "### NM Development News from Various Media"
+    STRATEGIC FOCUS SECTORS:
+    The firm actively pursues leads in these sectors. For any project found, categorize it under one of these:
+    - Transport and Infrastructure
+    - Residential / Public Housing
+    - Commercial / Corporate Fitouts
+    - Retail / Hospitality (Includes Canteens, Catering, and Tenancies)
+    - Healthcare / Education
+    - Industrial / Data Centre
+    - Maintenance / Energy
+
+    CATEGORIES TO ORGANIZE BY:
+    1. "### Upcoming Tenders & Consultancy Notices" (Active bidding & Forecasts)
+    2. "### HKSAR Gov Press Releases" (Policy & Funding)
+    3. "### NM Development News from Various Media" (Market Trends)
 
     RULES:
+    - Analyze every entry through a QS lens (e.g., cost estimation, procurement, contract management, or tenancy valuation).
+    - CRITICAL: If a lead involves a "Tenancy," "License," or "Fit-out" in the NM area, highlight its value for A&A works and cost advisory.
+    - Use bullet points. Summarize the QS Lead value first.
     - Use bullet points for each entry.
     - Summarize the QS Lead first.
     - FORCE A NEW LINE after the summary text.
     - Omit expired dates. Suggest why it is a QS lead.
     - Place the link on its own line using this format: [View Source Detail >](URL)
     - Add an extra empty line** between different bullet points to prevent "text walls."
-
-    Inside categories 2 and 3, group by:
-    - Transport and Infrastructure
-    - Residential / Public Housing
-    - Commercial / Corporate Fitouts
-    - Retail / Hospitality
-    - Healthcare / Education
-    - Industrial / Data Centre
-    - Maintenance / Energy
 
     Articles:
     {articles_text}"""
@@ -183,9 +190,16 @@ def main():
     targets = [
         ("CEDD NM", "https://www.cedd.gov.hk/eng/our-projects/northern-metropolis/index.html"),
         ("HKHA Commercial", "https://www.housingauthority.gov.hk/en/commercial-properties/tender-notices-and-awards/index.html"),
+        ("HKHA Business", "https://www.housingauthority.gov.hk/en/business-partnerships/tenders/index.html"),
         ("ArchSD Consultancies", "https://www.archsd.gov.hk/en/tenders-notices/consultancies/notices-of-invitation-for-technical-and-fee-proposal.html"),
         ("MTRC Projects", "https://www.mtr.com.hk/en/corporate/tenders/new_projects.html"),
+        ("MTRC Operating Railway", "https://www.mtr.com.hk/en/corporate/tenders/or.html"),
+        ("MTRC Property Services", "https://www.mtr.com.hk/en/corporate/tenders/property_services.html"),
         ("HSITP Loop", "https://www.hsitp.org/en/tender-notices")
+        ("HKBU Tenders", "https://fohome.hkbu.edu.hk/for-suppliers/information/tender-notice.html"),
+        ("HSUHK Tenders", "https://fo.hsu.edu.hk/supplier/tender-notice/"),
+        ("EdUHK Tenders", "https://www.eduhk.hk/tender_notice/"),
+        ("Tung Wah College", "https://www.twc.edu.hk/en/Administration_Units/fo_prs/tender-notices")
     ]
     for n, u in targets: all_entries.extend(fetch_html_tenders(u, n))
     
@@ -193,6 +207,8 @@ def main():
     all_entries.extend(fetch_rss("https://www.info.gov.hk/gia/rss/general_en.xml", "GovHK", "gov"))
     all_entries.extend(fetch_rss("https://www.scmp.com/rss/96/feed", "SCMP", "media"))
     all_entries.extend(fetch_rss("https://news.mingpao.com/rss/ins/all.xml", "Ming Pao", "media"))
+    all_entries.extend(fetch_rss("https://www.thestandard.com.hk/rss/news.xml", "The Standard", "media"))
+    all_entries.extend(fetch_rss("https://rss.appleactionews.com/rss/sitemap.xml", "Sing Tao", "media")) # Note: Most require specific section feeds
 
     # Final Filter for News (Tenders already filtered in fetch)
     filtered = [e for e in all_entries if e['source_type'] == 'tender' or any(m.lower() in e['title'].lower() for m in NM_MARKERS)]
