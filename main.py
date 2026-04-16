@@ -81,10 +81,41 @@ def get_lang_config():
     return LANGUAGE_PRESETS.get(LANGUAGE, LANGUAGE_PRESETS["en"])
 
 def summarize(entries: list[dict]) -> str:
-    # ... (Keep the prompt and entries logic the same) ...
+    lang = get_lang_config()
+    if not entries:
+        return lang["empty_message"]
+
+    # This creates the list of articles for the AI to read
+    articles_text = "\n".join(
+        f"- {e.get('title', 'No Title')} | {e.get('link', 'No Link')}"
+        for e in entries
+    )
     
-    # This logic ensures the URL is exactly what Google wants:
-    # [BASE_URL]/chat/completions
+    # This is the "prompt" variable that was missing!
+    prompt = f"""You are a senior Business Development Manager for a Quantity Surveying (QS) firm.
+Identify "Work-in-Hand" or "Future Lead" opportunities in the Northern Metropolis (NM).
+
+SECTOR MAPPING:
+- Transport and Infrastructure
+- Residential / Public Housing
+- Commercial / Retail / Hospitality
+- Corporate Fitouts / A&A (Alterations and Addition)
+- Healthcare / Life Sciences / Education
+- Industrial / Data Centre / Distribution Center
+- Civic / Government / Cultural
+- Maintenance Contracts / Energy
+
+STRICT FILTERING LOGIC:
+1. Is this about physical development, land sale, funding, or a contract? 
+2. If YES, and it's related to NM or major projects, INCLUDE.
+3. If NO (crime, social, sports), DISCARD.
+
+Format by Sector. Highlight PROJECT SCALE (GFA, cost) if mentioned.
+
+Articles to analyze:
+{articles_text}"""
+
+    # Ensure the URL is exactly what Google wants
     base_url = LLM_BASE_URL.strip().rstrip('/')
     api_url = f"{base_url}/chat/completions"
 
