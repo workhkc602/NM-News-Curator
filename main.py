@@ -183,39 +183,53 @@ def send_email(content):
     with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
         server.starttls(); server.login(SMTP_USER, SMTP_PASS); server.send_message(msg)
 
+import json
+
 def main():
     log.info("Starting NM-Omni Scraper...")
     all_entries = []
-    # Tender Targets
-    targets = [
+    
+    # --- PART A: Specialized Tender Portals (HTML Scraping) ---
+    # These stay in main.py because they require the fetch_html_tenders function
+    tender_targets = [
         ("CEDD NM", "https://www.cedd.gov.hk/eng/our-projects/northern-metropolis/index.html"),
         ("HKHA Commercial", "https://www.housingauthority.gov.hk/en/commercial-properties/tender-notices-and-awards/index.html"),
         ("HKHA Business", "https://www.housingauthority.gov.hk/en/business-partnerships/tenders/index.html"),
-        ("ArchSD Consultancies", "https://www.archsd.gov.hk/en/tenders-notices/consultancies/notices-of-invitation-for-technical-and-fee-proposal.html"),
-        ("MTRC Projects", "https://www.mtr.com.hk/en/corporate/tenders/new_projects.html"),
-        ("MTRC Operating Railway", "https://www.mtr.com.hk/en/corporate/tenders/or.html"),
-        ("MTRC Property Services", "https://www.mtr.com.hk/en/corporate/tenders/property_services.html"),
+        ("ArchSD", "https://www.archsd.gov.hk/en/tenders-notices/consultancies/notices-of-invitation-for-technical-and-fee-proposal.html"),
+        ("MTRC", "https://www.mtr.com.hk/en/corporate/tenders/new_projects.html"),
         ("HSITP Loop", "https://www.hsitp.org/en/tender-notices"),
-        ("HKBU Tenders", "https://fohome.hkbu.edu.hk/for-suppliers/information/tender-notice.html"),
-        ("HSUHK Tenders", "https://fo.hsu.edu.hk/supplier/tender-notice/"),
-        ("EdUHK Tenders", "https://www.eduhk.hk/tender_notice/"),
-        ("Tung Wah College", "https://www.twc.edu.hk/en/Administration_Units/fo_prs/tender-notices")
+        ("HKBU", "https://fohome.hkbu.edu.hk/for-suppliers/information/tender-notice.html"),
+        ("HSUHK", "https://fo.hsu.edu.hk/supplier/tender-notice/"),
+        ("EdUHK", "https://www.eduhk.hk/tender_notice/")
     ]
-    for n, u in targets: all_entries.extend(fetch_html_tenders(u, n))
     
-    # RSS News
-    all_entries.extend(fetch_rss("https://www.info.gov.hk/gia/rss/general_en.xml", "GovHK", "gov"))
-    all_entries.extend(fetch_rss("https://www.scmp.com/rss/96/feed", "SCMP", "media"))
-    all_entries.extend(fetch_rss("https://news.mingpao.com/rss/ins/all.xml", "Ming Pao", "media"))
-    all_entries.extend(fetch_rss("https://www.thestandard.com.hk/rss/news.xml", "The Standard", "media"))
-    all_entries.extend(fetch_rss("https://rss.appleactionews.com/rss/sitemap.xml", "Sing Tao", "media")) # Note: Most require specific section feeds
+    for name, url in tender_targets:
+        log.info(f"Scraping Tender Portal: {name}")
+        all_entries.extend(fetch_html_tenders(url, name))
 
-    # Final Filter for News (Tenders already filtered in fetch)
-    filtered = [e for e in all_entries if e['source_type'] == 'tender' or any(m.lower() in e['title'].lower() for m in NM_MARKERS)]
+    # --- PART B: News & YouTube (Dynamic RSS from JSON) ---
+    # This reads your sources.json file and loops through every entry
+    try:
+        sources_path = os.path.join(os.path.dirname(__file__), 'sources.json')
+        with open(sources_path, 'r', encoding='utf-8') as f:
+            rss_sources = json.load(f)
+            for source in rss_sources:
+                log.info(f"Fetching RSS/YouTube: {source['name']}")
+                all_entries.extend(fetch_rss(source['url'], source['name'], source['category']))
+    except Exception as e:
+        log.error(f"Failed to load sources.json: {e}")
+
+    # --- PART C: Filter for NM Relevance ---
+    # Tenders are pre-filtered in fetch_html_tenders. 
+    # News/YouTube are filtered here against NM_MARKERS.
+    filtered = [
+        e for e in all_entries 
+        if e['source_type'] == 'tender' or any(m.lower() in e['title'].lower() for m in NM_MARKERS)
+    ]
     
     if filtered:
         digest = summarize(filtered)
         send_email(digest)
-        log.info("✅ Digest Sent.")
-
-if __name__ == "__main__": main()
+        log.info(f"✅ Success: {len(filtered)} items sent in digest.")
+    else:
+        log.info("No new relevant NM items found today.")
