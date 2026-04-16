@@ -195,7 +195,7 @@ def main():
         ("MTRC Projects", "https://www.mtr.com.hk/en/corporate/tenders/new_projects.html"),
         ("MTRC Operating Railway", "https://www.mtr.com.hk/en/corporate/tenders/or.html"),
         ("MTRC Property Services", "https://www.mtr.com.hk/en/corporate/tenders/property_services.html"),
-        ("HSITP Loop", "https://www.hsitp.org/en/tender-notices")
+        ("HSITP Loop", "https://www.hsitp.org/en/tender-notices"),
         ("HKBU Tenders", "https://fohome.hkbu.edu.hk/for-suppliers/information/tender-notice.html"),
         ("HSUHK Tenders", "https://fo.hsu.edu.hk/supplier/tender-notice/"),
         ("EdUHK Tenders", "https://www.eduhk.hk/tender_notice/"),
