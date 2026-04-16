@@ -3,7 +3,9 @@ import logging
 import httpx
 import feedparser
 import re
-from datetime import datetime
+import json  # CRITICAL
+import time  # CRITICAL
+from datetime import datetime, timedelta, timezone # Added timedelta and timezone
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
@@ -210,76 +212,60 @@ def send_email(content):
     with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
         server.starttls(); server.login(SMTP_USER, SMTP_PASS); server.send_message(msg)
 
-import json
-
 def main():
-    log.info("Starting NM-Omni Scraper...")
-    all_entries = []
-    
-    # --- PART A: Specialized Tender Portals (HTML Scraping) ---
-    # These stay in main.py because they require the fetch_html_tenders function
-    tender_targets = [
-        ("CEDD NM", "https://www.cedd.gov.hk/eng/our-projects/northern-metropolis/index.html"),
-        ("HKHA Commercial", "https://www.housingauthority.gov.hk/en/commercial-properties/tender-notices-and-awards/index.html"),
-        ("HKHA Business", "https://www.housingauthority.gov.hk/en/business-partnerships/tenders/index.html"),
-        ("ArchSD", "https://www.archsd.gov.hk/en/tenders-notices/consultancies/notices-of-invitation-for-technical-and-fee-proposal.html"),
-        ("MTRC", "https://www.mtr.com.hk/en/corporate/tenders/new_projects.html"),
-        ("HSITP Loop", "https://www.hsitp.org/en/tender-notices"),
-        ("HKBU", "https://fohome.hkbu.edu.hk/for-suppliers/information/tender-notice.html"),
-        ("HSUHK", "https://fo.hsu.edu.hk/supplier/tender-notice/"),
-        ("EdUHK", "https://www.eduhk.hk/tender_notice/")
-    ]
-    
-    for name, url in tender_targets:
-        log.info(f"Scraping Tender Portal: {name}")
-        all_entries.extend(fetch_html_tenders(url, name))
-
-# --- PART B: News & YouTube (Updated for GitHub Actions) ---
     try:
-        # This line ensures it finds the file regardless of where the script is called from
+        log.info("Starting NM-Omni Scraper...")
+        all_entries = []
+        
+        # --- PART A: Tenders ---
+        tender_targets = [
+            ("CEDD NM", "https://www.cedd.gov.hk/eng/our-projects/northern-metropolis/index.html"),
+            ("HKHA Commercial", "https://www.housingauthority.gov.hk/en/commercial-properties/tender-notices-and-awards/index.html"),
+            ("HKHA Business", "https://www.housingauthority.gov.hk/en/business-partnerships/tenders/index.html"),
+            ("ArchSD", "https://www.archsd.gov.hk/en/tenders-notices/consultancies/notices-of-invitation-for-technical-and-fee-proposal.html"),
+            ("MTRC", "https://www.mtr.com.hk/en/corporate/tenders/new_projects.html"),
+            ("HSITP Loop", "https://www.hsitp.org/en/tender-notices"),
+            ("HKBU", "https://fohome.hkbu.edu.hk/for-suppliers/information/tender-notice.html"),
+            ("HSUHK", "https://fo.hsu.edu.hk/supplier/tender-notice/"),
+            ("EdUHK", "https://www.eduhk.hk/tender_notice/")
+        ]
+        
+        for name, url in tender_targets:
+            all_entries.extend(fetch_html_tenders(url, name))
+
+        # --- PART B: News (JSON) ---
         base_dir = os.path.dirname(os.path.abspath(__file__))
         sources_path = os.path.join(base_dir, 'sources.json')
         
-        with open(sources_path, 'r', encoding='utf-8') as f:
-            rss_sources = json.load(f)
-            log.info(f"Loaded {len(rss_sources)} sources from JSON.") # Helpful log
-            for source in rss_sources:
-                all_entries.extend(fetch_rss(source['url'], source['name'], source['category']))
-    except FileNotFoundError:
-        log.error(f"CRITICAL: sources.json not found at {sources_path}")
+        if os.path.exists(sources_path):
+            with open(sources_path, 'r', encoding='utf-8') as f:
+                rss_sources = json.load(f)
+                for s in rss_sources:
+                    all_entries.extend(fetch_rss(s['url'], s['name'], s['category']))
+        else:
+            log.error(f"Missing sources.json at {sources_path}")
+
+        # --- PART C: Filter ---
+        filtered = []
+        for e in all_entries:
+            if e['source_type'] == 'tender':
+                filtered.append(e)
+                continue
+            search_text = (e.get('title', '') + " " + e.get('body', '')).lower()
+            if any(m.lower() in search_text for m in NM_MARKERS):
+                e.pop('body', None)
+                filtered.append(e)
+
+        if filtered:
+            digest = summarize(filtered)
+            send_email(digest)
+            log.info(f"✅ Sent {len(filtered)} items.")
+        else:
+            log.info("No relevant items found.")
+
     except Exception as e:
-        log.error(f"Error loading sources: {e}")
+        # This will force the error to appear in your GitHub log if the script fails
+        log.error(f"CRITICAL SCRIPT ERROR: {str(e)}", exc_info=True)
 
-    log.info(f"Total entries collected before filtering: {len(all_entries)}")
-    
-    # --- PART C: Filter ---
-    filtered = []
-    # ... your existing loop ...
-    
-    log.info(f"Total entries after filtering: {len(filtered)}")
-
-   # --- PART C: Filter for NM Relevance (Enhanced Title + Body Search) ---
-    filtered = []
-    
-    for e in all_entries:
-        # 1. Always keep Tenders (they are already filtered by markers in fetch_html_tenders)
-        if e['source_type'] == 'tender':
-            filtered.append(e)
-            continue
-            
-        # 2. For News/YouTube, check BOTH Title and Body/Summary
-        # We combine them into one search string to scan for markers
-        search_text = (e.get('title', '') + " " + e.get('body', '')).lower()
-        
-        if any(marker.lower() in search_text for marker in NM_MARKERS):
-            # Remove the 'body' before sending to AI to keep the prompt clean and save tokens
-            e.pop('body', None) 
-            filtered.append(e)
-    
-    # --- Final Processing ---
-    if filtered:
-        digest = summarize(filtered)
-        send_email(digest)
-        log.info(f"✅ Success: {len(filtered)} items sent in digest.")
-    else:
-        log.info("No new relevant NM items found today.")
+if __name__ == "__main__":
+    main()
