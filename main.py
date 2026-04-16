@@ -94,33 +94,34 @@ def fetch_html_tenders(url, source_name):
 def summarize(entries: list[dict]) -> str:
     if not entries: return "No relevant updates found."
 
-    # Format data for AI: explicitly labeling Title and Link
+    # Preparing the raw data for the AI
     articles_text = ""
     for e in entries:
-        articles_text += f"[{e['source_type'].upper()}] Source: {e['source_name']}\nTitle: {e['title']}\nLink: {e['link']}\n\n"
+        articles_text += f"TYPE: {e['source_type'].upper()} | SRC: {e['source_name']}\nTITLE: {e['title']}\nURL: {e['link']}\n\n"
 
     prompt = f"""You are a senior Business Development Manager for a QS firm.
     
-    START your response with the standard Report Header (To/From/Date/Subject).
-    To: Senior Partners / Board of Directors
+    START your response with the standard Report Header.
     From: NM News Curator
     Date: {datetime.now().strftime('%B %d, %Y')}
     Subject: Northern Metropolis (NM) & Major Projects: Opportunity Pipeline Report
 
     ---
 
-    INSTRUCTIONS:
-    Divide the report into THREE main categories in this exact order:
-    1. "### Upcoming Tenders & Consultancy Notices" (Articles tagged [TENDER])
-    2. "### HKSAR Gov Press Releases" (Articles tagged [GOV])
-    3. "### NM Development News from Various Media" (Articles tagged [MEDIA])
+    ### INSTRUCTIONS:
+    Divide into THREE main categories in this order:
+    1. "### Upcoming Tenders & Consultancy Notices"
+    2. "### HKSAR Gov Press Releases"
+    3. "### NM Development News from Various Media"
 
-    For Category 1 (Tenders):
-    - Specifically highlight any 'Forecasts' or 'Expression of Interest' dates.
-    - Group by Institution/Source.
+    ### FORMATTING RULES (STRICT COMPLIANCE REQUIRED):
+    - Use bullet points for each entry.
+    - **Summarize the QS Lead first.**
+    - **FORCE A NEW LINE** after the summary text.
+    - **Place the link on its own line** using this format: [View Source Detail >](URL)
+    - **Add an extra empty line** between different bullet points to prevent "text walls."
 
-    For Categories 2 and 3:
-    Group leads by these specific Sectors:
+    Inside categories 2 and 3, group by:
     - Transport and Infrastructure
     - Residential / Public Housing
     - Commercial / Corporate Fitouts
@@ -129,16 +130,11 @@ def summarize(entries: list[dict]) -> str:
     - Industrial / Data Centre
     - Maintenance / Energy
 
-    CRITICAL RULE FOR ALL ENTRIES:
-    For every bullet point or summary you write, you MUST append the corresponding URL (Link) provided at the end of that entry so the reader can click for more information.
-
-    For each entry, summarize why it's a lead for a QS (e.g., project scale, cost, or land sale).
-
     Articles to process:
     {articles_text}"""
 
+    # --- Keep your existing URL and POST logic below ---
     api_url = f"{LLM_BASE_URL.strip().rstrip('/')}/chat/completions"
-
     try:
         resp = httpx.post(
             api_url,
@@ -146,7 +142,7 @@ def summarize(entries: list[dict]) -> str:
             json={
                 "model": LLM_MODEL,
                 "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.1, # Slightly lower for even higher factual link accuracy
+                "temperature": 0.1,
             },
             timeout=150,
         )
@@ -154,7 +150,6 @@ def summarize(entries: list[dict]) -> str:
         return resp.json()["choices"][0]["message"]["content"].strip()
     except Exception as e:
         return f"Error generating summary: {e}"
-
 # ---------------------------------------------------------------------------
 # 4. Main Execution
 # ---------------------------------------------------------------------------
