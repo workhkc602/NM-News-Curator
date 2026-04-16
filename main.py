@@ -86,36 +86,26 @@ def summarize(entries: list[dict]) -> str:
         return lang["empty_message"]
 
     articles_text = "\n".join(
-        f"- {e.get('title', 'No Title')} | {e.get('link', 'No Link')} | {e.get('published', '')}"
+        f"- {e.get('title', 'No Title')} | {e.get('link', 'No Link')}"
         for e in entries
     )
     
     prompt = f"""You are a senior Business Development Manager for a Quantity Surveying (QS) firm.
-Identify "Work-in-Hand" or "Future Lead" opportunities in the Northern Metropolis (NM).
-
-SECTOR MAPPING:
-- Transport and Infrastructure
-- Residential / Public Housing
-- Commercial / Retail / Hospitality
-- Corporate Fitouts / A&A (Alterations and Addition)
-- Healthcare / Life Sciences / Education
-- Industrial / Data Centre / Distribution Center
-- Civic / Government / Cultural
-- Maintenance Contracts / Energy
-
-STRICT FILTERING LOGIC:
-1. Is this about physical development, land sale, funding, or a contract? 
-2. If YES, and it's related to NM or major projects, INCLUDE.
-3. If NO (crime, social, sports), DISCARD.
-
-Format by Sector. Highlight PROJECT SCALE (GFA, cost) if mentioned.
+Categorize these 15 news leads into sectors (Infrastructure, Housing, A&A, etc.) for the Northern Metropolis.
+Focus on GFA and project scale.
 
 Articles:
 {articles_text}"""
 
+    # --- CLEAN URL LOGIC ---
+    # This ensures we don't end up with "v1beta/openai//chat/completions"
+    base_url = LLM_BASE_URL.rstrip('/') 
+    api_url = f"{base_url}/chat/completions"
+
     try:
+        log.info(f"Connecting to AI at: {api_url}") # This helps us debug the log
         resp = httpx.post(
-            f"{LLM_BASE_URL}/chat/completions",
+            api_url,
             headers={"Authorization": f"Bearer {LLM_API_KEY}"},
             json={
                 "model": LLM_MODEL,
@@ -128,8 +118,7 @@ Articles:
         return resp.json()["choices"][0]["message"]["content"].strip()
     except Exception as e:
         log.error(f"AI Summary Error: {e}")
-        return "Error generating summary."
-
+        return f"Error generating summary: {e}"
 # ---------------------------------------------------------------------------
 # 4. Email & Main Execution
 # ---------------------------------------------------------------------------
