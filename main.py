@@ -140,32 +140,27 @@ def fetch_html_tenders(url, source_name):
 # 4. AI & Email
 # ---------------------------------------------------------------------------
 def summarize(entries):
-    # 1. FLATTEN AND VALIDATE (The Fix)
-    # This ensures that even if a scraper accidentally returns [[dict]], we turn it into [dict]
+   # 1. Flatten and Validate Input
     clean_entries = []
     for item in entries:
         if isinstance(item, list):
-            # If it's a list, look inside it
-            for sub_item in item:
-                if isinstance(sub_item, dict):
-                    clean_entries.append(sub_item)
+            clean_entries.extend([i for i in item if isinstance(i, dict)])
         elif isinstance(item, dict):
             clean_entries.append(item)
     
     if not clean_entries:
-        return "No valid data entries found to summarize."
+        return "No valid data found to summarize."
 
-    # 2. PREPARE TEXT
+    # 2. Build the Articles Text
     articles_text = ""
     for i, e in enumerate(clean_entries):
-        # Using .get() ensures that if a key is missing, it returns 'N/A' instead of crashing
         articles_text += f"ENTRY #{i+1}\n"
         articles_text += f"SOURCE: {e.get('source_name', 'Unknown')}\n"
         articles_text += f"TYPE: {e.get('source_type', 'news')}\n"
         articles_text += f"TITLE: {e.get('title', 'No Title')}\n"
         articles_text += f"URL: {e.get('link', '')}\n\n"
 
-    # 3. THE PROMPT
+    # 3. The Prompt
     prompt = f"""You are a senior Business Development Manager for a QS firm.
     
     To: Senior Partners / Board of Directors
@@ -202,15 +197,38 @@ def summarize(entries):
     Articles:
     {articles_text}"""
 
-   # 4. API CALL
+ # 4. API Call with Safety Check
     try:
-        resp = httpx.post(f"{LLM_BASE_URL.strip().rstrip('/')}/chat/completions",
-            headers={"Authorization": f"Bearer {LLM_API_KEY}", "Content-Type": "application/json"},
-            json={"model": LLM_MODEL, "messages": [{"role": "user", "content": prompt}], "temperature": 0.1}, timeout=150)
-        return resp.json()["choices"][0]["message"]["content"].strip()
+        log.info(f"Sending {len(clean_entries)} items to Gemini...")
+        resp = httpx.post(
+            f"{LLM_BASE_URL.strip().rstrip('/')}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {LLM_API_KEY}", 
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": LLM_MODEL, 
+                "messages": [{"role": "user", "content": prompt}], 
+                "temperature": 0.1
+            }, 
+            timeout=300 # 5 Minute Timeout
+        )
+        
+        # --- THE SAFETY CHECK (Fixes the Index Error) ---
+        data = resp.json()
+        
+        # Check if 'choices' exists in the response
+        if "choices" in data and len(data["choices"]) > 0:
+            return data["choices"][0]["message"]["content"].strip()
+        else:
+            # If AI returns an error (like 'Invalid API Key' or 'Overloaded')
+            error_msg = data.get("error", {}).get("message", "Unknown AI Error")
+            log.error(f"AI API Error: {error_msg}")
+            return f"Summarization Error from AI: {error_msg}"
+
     except Exception as e: 
-        log.error(f"AI Error: {e}")
-        return f"Summarization Error: {e}"
+        log.error(f"Network/System Error: {e}")
+        return f"Summarization System Error: {e}"
         
 def send_email(content):
     import smtplib
