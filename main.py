@@ -251,7 +251,7 @@ def main():
                 for s in rss_sources:
                     all_entries.extend(fetch_rss(s['url'], s['name'], s['category']))
 
-        # --- PART C: Filter ---
+       # --- PART C: Filter ---
         filtered = []
         for e in all_entries:
             if not isinstance(e, dict): continue
@@ -260,16 +260,25 @@ def main():
                 filtered.append(e)
                 continue
             
-            # Use .get() safely and combine Title + Body
             text_to_scan = (e.get('title', '') + " " + e.get('body', '')).lower()
             if any(m.lower() in text_to_scan for m in NM_MARKERS):
-                e.pop('body', None) # Clean up before AI
+                e.pop('body', None) 
                 filtered.append(e)
 
+        # --- NEW LOGIC: Priority Sort & Cap at 25 ---
         if filtered:
-            digest = summarize(filtered)
+            # Sort: Tenders first, then News/Media
+            # lambda returns 0 for tender, 1 for everything else (0 comes before 1)
+            filtered.sort(key=lambda x: 0 if x.get('source_type') == 'tender' else 1)
+            
+            # Keep only the top 25 items
+            final_selection = filtered[:25]
+            
+            log.info(f"📊 Filtered {len(filtered)} items. Capping at top {len(final_selection)} for AI.")
+            
+            digest = summarize(final_selection) # Send the capped list
             send_email(digest)
-            log.info(f"✅ Sent {len(filtered)} items.")
+            log.info(f"✅ Successfully sent email digest.")
         else:
             log.info("No relevant items found.")
 
