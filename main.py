@@ -269,84 +269,57 @@ def main():
                 for s in rss_sources:
                     all_entries.extend(fetch_rss(s['url'], s['name'], s['category']))
 
-      # --- PART C: Filter & Flatten ---
-        # We use a nested loop approach to ensure we handle any accidental nested lists
-        raw_list = []
-        for item in all_entries:
-            if isinstance(item, list):
-                raw_list.extend(item) # Unpacks [[dict]] into [dict]
-            else:
-                raw_list.append(item)
+    # --- PART C: The Recursive Flattener (The Nuke Fix) ---
+        def flatten(items):
+            flat = []
+            for i in items:
+                if isinstance(i, list):
+                    flat.extend(flatten(i))
+                elif isinstance(i, dict):
+                    flat.append(i)
+            return flat
+
+        # Force all_entries to be a flat list of dictionaries
+        clean_list = flatten(all_entries)
 
         filtered = []
-        for e in raw_list:
-            # Skip anything that isn't a dictionary
-            if not isinstance(e, dict): 
-                continue
-            
-            # Now we can safely check keys
+        for e in clean_list:
+            # We now know 'e' MUST be a dictionary because of the flattener
             s_type = e.get('source_type', 'news')
             
             if s_type == 'tender':
                 filtered.append(e)
             else:
-                # Safe checking for News/Media
                 title = str(e.get('title', ''))
-                body = str(e.get('body', ''))
+                # Handle cases where 'body' might be missing entirely
+                body = str(e.get('body', e.get('summary', ''))) 
                 search_text = (title + " " + body).lower()
                 
                 if any(m.lower() in search_text for m in NM_MARKERS):
-                    e.pop('body', None) # Remove bulky text before sending to AI
-                    filtered.append(e)
+                    # Create a clean version for the AI without the bulky body
+                    ai_entry = {
+                        "title": e.get('title'),
+                        "link": e.get('link'),
+                        "source_name": e.get('source_name'),
+                        "source_type": s_type
+                    }
+                    filtered.append(ai_entry)
 
         # --- PART D: Priority Sort, Cap, and Summarize ---
         if filtered:
-            # 1. Sort: Tenders first
-            filtered.sort(key=lambda x: 0 if x.get('source_type') == 'tender' else 1)
-            
-            # 2. Cap at 25 to prevent AI timeout
-            final_selection = filtered[:25]
-            
-            log.info(f"📊 Found {len(filtered)} total. Sending top {len(final_selection)} to AI.")
-            
-            # 3. Summarize (ensure your summarize() has timeout=300)
-            digest = summarize(final_selection)
-            send_email(digest)
-            log.info("✅ Email sent successfully.")
-        else:
-            log.info("No relevant items found this week.")
-
-    except Exception as e:
-        log.error(f"CRITICAL SCRIPT ERROR: {str(e)}", exc_info=True) # --- PART C: Filter ---
-        filtered = []
-        for e in all_entries:
-            if not isinstance(e, dict): continue
-            
-            if e.get('source_type') == 'tender':
-                filtered.append(e)
-                continue
-            
-            text_to_scan = (e.get('title', '') + " " + e.get('body', '')).lower()
-            if any(m.lower() in text_to_scan for m in NM_MARKERS):
-                e.pop('body', None) 
-                filtered.append(e)
-
-        # --- NEW LOGIC: Priority Sort & Cap at 25 ---
-        if filtered:
-            # Sort: Tenders first, then News/Media
-            # lambda returns 0 for tender, 1 for everything else (0 comes before 1)
+            # Sort: Tenders first
             filtered.sort(key=lambda x: 0 if x.get('source_type') == 'tender' else 1)
             
             # Keep only the top 25 items
             final_selection = filtered[:25]
             
-            log.info(f"📊 Filtered {len(filtered)} items. Capping at top {len(final_selection)} for AI.")
+            log.info(f"📊 Sending top {len(final_selection)} of {len(filtered)} items to AI.")
             
-            digest = summarize(final_selection) # Send the capped list
+            digest = summarize(final_selection)
             send_email(digest)
-            log.info(f"✅ Successfully sent email digest.")
+            log.info("✅ Weekly Digest Processed.")
         else:
-            log.info("No relevant items found.")
+            log.info("No relevant items found in the 160-hour window.")
 
     except Exception as e:
         log.error(f"CRITICAL SCRIPT ERROR: {str(e)}", exc_info=True)
