@@ -160,6 +160,8 @@ def summarize(entries):
 
     prompt = f"""You are a senior Business Development Manager for a QS firm.
   
+    CRITICAL: Since this is a weekly digest, start with a 3-bullet point 'Executive Strategic Summary' highlighting the single most important tender, the most impactful policy change, and the biggest media trend from the past 7 days.
+    
     START with Header:
     To: Senior Partners / Board of Directors
     From: NM News Curator
@@ -184,10 +186,9 @@ def summarize(entries):
     RULES:
     - Analyze every entry through a QS lens (e.g., cost estimation, procurement, contract management, or tenancy valuation).
     - CRITICAL: If a lead involves a "Tenancy," "License," or "Fit-out" in the NM area, highlight its value for A&A works and cost advisory.
-    - Use bullet points. Summarize the QS Lead value first.
-    - Use bullet points for each entry.
+    - Use bullet points for each entry. EACH BULLET POINT MUST BE A NEW LINE.
     - Summarize the QS Lead first.
-    - FORCE A NEW LINE after the summary text.
+    - MUST FORCE A NEW LINE after the summary text.
     - Omit expired dates. Suggest why it is a QS lead.
     - Place the link on its own line using this format: [View Source Detail >](URL)
     - Add an extra empty line** between different bullet points to prevent "text walls."
