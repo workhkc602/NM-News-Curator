@@ -192,17 +192,32 @@ def summarize(entries):
     Articles:
     {articles_text}"""
 
-    # 4. API Call with Retry Logic
+   # 4. API Call with Retry Logic
     max_retries = 3
     for attempt in range(max_retries):
         try:
-            log.info(f"AI Attempt {attempt + 1}. Using Base URL: {LLM_BASE_URL}")
-            url = f"{LLM_BASE_URL.strip().rstrip('/')}/v1/chat/completions"
+            # 1. Clean the Base URL to remove any trailing slashes or /v1 additions
+            base = LLM_BASE_URL.strip().rstrip('/')
+            if base.endswith('/v1'):
+                base = base[:-3] # Remove accidental /v1 if user added it to secret
+            
+            # 2. Construct the EXACT path Google requires for OpenAI compatibility
+            # It MUST be: {base_url}/v1/chat/completions
+            url = f"{base}/v1/chat/completions"
+            
+            log.info(f"AI Attempt {attempt + 1}. Routing to: {url}")
             
             resp = httpx.post(
                 url,
-                headers={"Authorization": f"Bearer {LLM_API_KEY}", "Content-Type": "application/json"},
-                json={"model": LLM_MODEL, "messages": [{"role": "user", "content": prompt}], "temperature": 0.1},
+                headers={
+                    "Authorization": f"Bearer {LLM_API_KEY}", 
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": LLM_MODEL, 
+                    "messages": [{"role": "user", "content": prompt}], 
+                    "temperature": 0.1
+                }, 
                 timeout=300
             )
             data = resp.json()
@@ -223,7 +238,7 @@ def summarize(entries):
                 time.sleep(10)
                 continue
             return f"Summarization System Error: {e}"
-
+            
 def send_email(content):
     if not content or "Summarization Error" in str(content):
         log.error("Content invalid or contains error. Skipping email send.")
