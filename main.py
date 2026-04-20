@@ -203,6 +203,7 @@ def summarize(entries):
     max_retries = 3
     for attempt in range(max_retries):
         try:
+            log.info(f"DEBUG: Attempt {attempt + 1}. Using Base URL: {LLM_BASE_URL}")
             log.info(f"AI Attempt {attempt + 1} for {len(clean_entries)} items...")
             resp = httpx.post(
                 f"{LLM_BASE_URL.strip().rstrip('/')}/chat/completions",
