@@ -142,6 +142,7 @@ def fetch_html_tenders(url, source_name):
 # 4. AI & Email
 # ---------------------------------------------------------------------------
 def summarize(entries):
+   def summarize(entries):
     # 1. Flatten and Validate Input
     clean_entries = []
     for item in entries:
@@ -162,7 +163,7 @@ def summarize(entries):
         articles_text += f"TITLE: {e.get('title', 'No Title')}\n"
         articles_text += f"URL: {e.get('link', '')}\n\n"
 
-    # 3. The Prompt (Preserving your full Strategic structure)
+    # 3. The Prompt
     prompt = f"""You are a senior Business Development Manager for a QS firm.
     
     To: Senior Partners / Board of Directors
@@ -199,41 +200,49 @@ def summarize(entries):
     Articles:
     {articles_text}"""
 
-   # 4. API Call with Retry Logic
+  # 4. API Call with Corrected Indentation & URL
     max_retries = 3
     for attempt in range(max_retries):
         try:
-            log.info(f"DEBUG: Attempt {attempt + 1}. Using Base URL: {LLM_BASE_URL}")
-            log.info(f"AI Attempt {attempt + 1} for {len(clean_entries)} items...")
-          resp = httpx.post(
-    f"{LLM_BASE_URL.strip().rstrip('/')}/v1/chat/completions", # Added /v1/ here
-    headers={"Authorization": f"Bearer {LLM_API_KEY}", "Content-Type": "application/json"},
-    json={"model": LLM_MODEL, "messages": [{"role": "user", "content": prompt}], "temperature": 0.1},
-    timeout=300
-)
+            log.info(f"AI Attempt {attempt + 1}. Using Base URL: {LLM_BASE_URL}")
+            
+            # The combination of v1beta/openai + /v1/chat/completions is the winner
+            url = f"{LLM_BASE_URL.strip().rstrip('/')}/v1/chat/completions"
+            
+            resp = httpx.post(
+                url,
+                headers={
+                    "Authorization": f"Bearer {LLM_API_KEY}", 
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": LLM_MODEL, 
+                    "messages": [{"role": "user", "content": prompt}], 
+                    "temperature": 0.1
+                }, 
+                timeout=300
+            )
             
             data = resp.json()
 
-            # If we get a list (the error you just saw), check if it's a 503 to retry
-            if isinstance(data, list) and len(data) > 0:
-                error_code = data[0].get('error', {}).get('code')
-                if error_code == 503 and attempt < max_retries - 1:
-                    log.warning("Gemini is busy (503). Retrying in 15 seconds...")
+            # Handle errors from API
+            if isinstance(data, dict) and "error" in data:
+                error_code = data.get("error", {}).get("code")
+                if error_code in [429, 503] and attempt < max_retries - 1:
                     time.sleep(15)
                     continue
-            
-            # Standard success path
+                return f"Summarization Error: {data.get('error', {}).get('message')}"
+
             if isinstance(data, dict) and "choices" in data:
                 return data["choices"][0]["message"]["content"].strip()
             
-            # If it's not a retryable error, return the error message
-            return f"Summarization Error: {str(data)}"
+            return f"Unexpected Response Format: {str(data)[:200]}"
 
         except Exception as e:
             if attempt < max_retries - 1:
                 time.sleep(10)
                 continue
-            return f"Summarization System Error after {max_retries} attempts: {e}"
+            return f"Summarization System Error: {e}"
         
 def send_email(content):
     import smtplib
