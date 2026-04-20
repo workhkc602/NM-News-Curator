@@ -24,7 +24,7 @@ def get_env(name: str, default: str = None):
     return value
 
 LLM_API_KEY = get_env("LLM_API_KEY")
-LLM_BASE_URL = get_env("LLM_BASE_URL")
+LLM_BASE_URL = get_env("LLM_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/")
 
 # Change from 'gemini-3-flash-preview' to the stable version
 LLM_MODEL = get_env("LLM_MODEL", "gemini-1.5-flash")
