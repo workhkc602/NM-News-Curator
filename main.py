@@ -27,7 +27,7 @@ LLM_API_KEY = get_env("LLM_API_KEY")
 LLM_BASE_URL = get_env("LLM_BASE_URL")
 
 # Change from 'gemini-3-flash-preview' to the stable version
-LLM_MODEL = get_env("LLM_MODEL", "gemini-3-flash")
+LLM_MODEL = get_env("LLM_MODEL", "gemini-1.5-flash")
 
 SMTP_HOST = get_env("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(get_env("SMTP_PORT", "587"))
