@@ -25,7 +25,9 @@ def get_env(name: str, default: str = None):
 
 LLM_API_KEY = get_env("LLM_API_KEY")
 LLM_BASE_URL = get_env("LLM_BASE_URL")
-LLM_MODEL = get_env("LLM_MODEL", "gemini-3-flash-preview")
+
+# Change from 'gemini-3-flash-preview' to the stable version
+LLM_MODEL = get_env("LLM_MODEL", "gemini-3-flash")
 
 SMTP_HOST = get_env("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(get_env("SMTP_PORT", "587"))
@@ -197,49 +199,40 @@ def summarize(entries):
     Articles:
     {articles_text}"""
 
-    # 4. API Call with Advanced Safety Checks
-    try:
-        log.info(f"Sending {len(clean_entries)} items to Gemini...")
-        resp = httpx.post(
-            f"{LLM_BASE_URL.strip().rstrip('/')}/chat/completions",
-            headers={
-                "Authorization": f"Bearer {LLM_API_KEY}", 
-                "Content-Type": "application/json"
-            },
-            json={
-                "model": LLM_MODEL, 
-                "messages": [{"role": "user", "content": prompt}], 
-                "temperature": 0.1
-            }, 
-            timeout=300 # 5 Minute Timeout
-        )
-        
-        # --- IMPROVED SAFETY CHECK ---
-        data = resp.json()
-        
-        # Check if data is actually a dictionary before using .get()
-        if not isinstance(data, dict):
-            log.error(f"Unexpected response format: {type(data)}")
-            return f"Summarization Error: API returned {type(data)} instead of dictionary. Content: {str(data)[:200]}"
+   # 4. API Call with Retry Logic
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            log.info(f"AI Attempt {attempt + 1} for {len(clean_entries)} items...")
+            resp = httpx.post(
+                f"{LLM_BASE_URL.strip().rstrip('/')}/chat/completions",
+                headers={"Authorization": f"Bearer {LLM_API_KEY}", "Content-Type": "application/json"},
+                json={"model": LLM_MODEL, "messages": [{"role": "user", "content": prompt}], "temperature": 0.1},
+                timeout=300
+            )
+            
+            data = resp.json()
 
-        # Check if 'choices' exists and is a valid list
-        choices = data.get("choices")
-        if choices and isinstance(choices, list) and len(choices) > 0:
-            return choices[0].get("message", {}).get("content", "No content returned.").strip()
-        else:
-            # Safely extract error message from the dictionary
-            error_info = data.get("error")
-            if isinstance(error_info, dict):
-                error_msg = error_info.get("message", "Unknown API error structure")
-            else:
-                error_msg = str(error_info) if error_info else "Unknown Error"
-                
-            log.error(f"AI API Error: {error_msg}")
-            return f"Summarization Error from AI: {error_msg}"
+            # If we get a list (the error you just saw), check if it's a 503 to retry
+            if isinstance(data, list) and len(data) > 0:
+                error_code = data[0].get('error', {}).get('code')
+                if error_code == 503 and attempt < max_retries - 1:
+                    log.warning("Gemini is busy (503). Retrying in 15 seconds...")
+                    time.sleep(15)
+                    continue
+            
+            # Standard success path
+            if isinstance(data, dict) and "choices" in data:
+                return data["choices"][0]["message"]["content"].strip()
+            
+            # If it's not a retryable error, return the error message
+            return f"Summarization Error: {str(data)}"
 
-    except Exception as e: 
-        log.error(f"Network/System Error: {e}")
-        return f"Summarization System Error: {str(e)}"
+        except Exception as e:
+            if attempt < max_retries - 1:
+                time.sleep(10)
+                continue
+            return f"Summarization System Error after {max_retries} attempts: {e}"
         
 def send_email(content):
     import smtplib
