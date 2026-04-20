@@ -205,12 +205,12 @@ def summarize(entries):
         try:
             log.info(f"DEBUG: Attempt {attempt + 1}. Using Base URL: {LLM_BASE_URL}")
             log.info(f"AI Attempt {attempt + 1} for {len(clean_entries)} items...")
-            resp = httpx.post(
-                f"{LLM_BASE_URL.strip().rstrip('/')}/chat/completions",
-                headers={"Authorization": f"Bearer {LLM_API_KEY}", "Content-Type": "application/json"},
-                json={"model": LLM_MODEL, "messages": [{"role": "user", "content": prompt}], "temperature": 0.1},
-                timeout=300
-            )
+          resp = httpx.post(
+    f"{LLM_BASE_URL.strip().rstrip('/')}/v1/chat/completions", # Added /v1/ here
+    headers={"Authorization": f"Bearer {LLM_API_KEY}", "Content-Type": "application/json"},
+    json={"model": LLM_MODEL, "messages": [{"role": "user", "content": prompt}], "temperature": 0.1},
+    timeout=300
+)
             
             data = resp.json()
 
