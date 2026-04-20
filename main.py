@@ -154,9 +154,16 @@ def fetch_html_tenders(url, source_name):
 # 4. AI Summarization & Email
 # ---------------------------------------------------------------------------
 def summarize(entries):
+   # Prepare the text for the AI
     articles_text = ""
-    for e in entries:
-        articles_text += f"[{e['source_type'].upper()}] {e['source_name']}: {e['title']}\nURL: {e['link']}\n\n"
+    
+    # ✅ CORRECT LOGIC: Use 'enumerate' to get both a number (i) and the item (e)
+    for i, e in enumerate(entries):
+        articles_text += f"ENTRY #{i+1}\n"
+        # We ask 'e' (the single article), NOT 'entries' (the list)
+        articles_text += f"SOURCE: {e.get('source_name', 'Unknown')}\n"
+        articles_text += f"TITLE: {e.get('title', 'No Title')}\n"
+        articles_text += f"URL: {e.get('link', '')}\n\n"
 
     prompt = f"""You are a senior Business Development Manager for a QS firm.
   
