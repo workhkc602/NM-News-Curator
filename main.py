@@ -140,10 +140,32 @@ def fetch_html_tenders(url, source_name):
 # 4. AI & Email
 # ---------------------------------------------------------------------------
 def summarize(entries):
-    articles_text = ""
-    for i, e in enumerate(entries):
-        articles_text += f"ENTRY #{i+1}\nSOURCE: {e.get('source_name')}\nTYPE: {e.get('source_type')}\nTITLE: {e.get('title')}\nURL: {e.get('link')}\n\n"
+    # 1. FLATTEN AND VALIDATE (The Fix)
+    # This ensures that even if a scraper accidentally returns [[dict]], we turn it into [dict]
+    clean_entries = []
+    for item in entries:
+        if isinstance(item, list):
+            # If it's a list, look inside it
+            for sub_item in item:
+                if isinstance(sub_item, dict):
+                    clean_entries.append(sub_item)
+        elif isinstance(item, dict):
+            clean_entries.append(item)
+    
+    if not clean_entries:
+        return "No valid data entries found to summarize."
 
+    # 2. PREPARE TEXT
+    articles_text = ""
+    for i, e in enumerate(clean_entries):
+        # Using .get() ensures that if a key is missing, it returns 'N/A' instead of crashing
+        articles_text += f"ENTRY #{i+1}\n"
+        articles_text += f"SOURCE: {e.get('source_name', 'Unknown')}\n"
+        articles_text += f"TYPE: {e.get('source_type', 'news')}\n"
+        articles_text += f"TITLE: {e.get('title', 'No Title')}\n"
+        articles_text += f"URL: {e.get('link', '')}\n\n"
+
+    # 3. THE PROMPT
     prompt = f"""You are a senior Business Development Manager for a QS firm.
     
     To: Senior Partners / Board of Directors
@@ -180,12 +202,15 @@ def summarize(entries):
     Articles:
     {articles_text}"""
 
+   # 4. API CALL
     try:
         resp = httpx.post(f"{LLM_BASE_URL.strip().rstrip('/')}/chat/completions",
             headers={"Authorization": f"Bearer {LLM_API_KEY}", "Content-Type": "application/json"},
             json={"model": LLM_MODEL, "messages": [{"role": "user", "content": prompt}], "temperature": 0.1}, timeout=150)
         return resp.json()["choices"][0]["message"]["content"].strip()
-    except Exception as e: return f"Error: {e}"
+    except Exception as e: 
+        log.error(f"AI Error: {e}")
+        return f"Summarization Error: {e}"
         
 def send_email(content):
     import smtplib
