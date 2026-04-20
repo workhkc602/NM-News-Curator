@@ -34,7 +34,7 @@ SMTP_PASS = get_env("SMTP_PASS")
 EMAIL_TO = get_env("EMAIL_TO")
 SENDER_EMAIL = get_env("SENDER_EMAIL")
 SENDER_NAME = get_env("SENDER_NAME", "NM News Curator")
-HOURS_LOOKBACK = int(get_env("HOURS_LOOKBACK", "24"))
+HOURS_LOOKBACK = int(get_env("HOURS_LOOKBACK", "160"))
 # ---------------------------------------------------------------------------
 # 2. Advanced Keyword & Date Logic
 # ---------------------------------------------------------------------------
@@ -96,6 +96,7 @@ def fetch_rss(url, source_name, source_type):
     entries = []
     now = datetime.now(timezone.utc)
     threshold = now - timedelta(hours=HOURS_LOOKBACK)
+    # ... it will now filter for anything newer than 7 days ago ...
 
     try:
         with httpx.Client(headers=headers, follow_redirects=True, timeout=20.0) as client:
