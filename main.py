@@ -192,20 +192,15 @@ def summarize(entries):
     Articles:
     {articles_text}"""
 
-   # 4. API Call with Retry Logic
+   # 4. API Call with Hardcoded Stability
     max_retries = 3
     for attempt in range(max_retries):
         try:
-            # 1. Clean the Base URL to remove any trailing slashes or /v1 additions
-            base = LLM_BASE_URL.strip().rstrip('/')
-            if base.endswith('/v1'):
-                base = base[:-3] # Remove accidental /v1 if user added it to secret
+            # FORCE the absolute correct Google OpenAI-compatible path
+            # We ignore LLM_BASE_URL entirely here to ensure stability
+            url = "https://generativelanguage.googleapis.com/v1beta/openai/v1/chat/completions"
             
-            # 2. Construct the EXACT path Google requires for OpenAI compatibility
-            # It MUST be: {base_url}/v1/chat/completions
-            url = f"{base}/v1/chat/completions"
-            
-            log.info(f"AI Attempt {attempt + 1}. Routing to: {url}")
+            log.info(f"AI Attempt {attempt + 1}. Forced Endpoint: {url}")
             
             resp = httpx.post(
                 url,
@@ -214,55 +209,35 @@ def summarize(entries):
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": LLM_MODEL, 
+                    "model": "gemini-1.5-flash",  # Hardcoded for stability
                     "messages": [{"role": "user", "content": prompt}], 
                     "temperature": 0.1
                 }, 
                 timeout=300
             )
+            
             data = resp.json()
 
+            # Handle errors from API
             if isinstance(data, dict) and "error" in data:
-                error_code = data.get("error", {}).get("code")
-                if error_code in [429, 503] and attempt < max_retries - 1:
+                msg = data.get("error", {}).get("message", "Unknown API error")
+                log.error(f"Google API Error: {msg}")
+                if attempt < max_retries - 1:
                     time.sleep(15)
                     continue
-                return f"Summarization Error: {data.get('error', {}).get('message')}"
+                return f"Summarization Error: {msg}"
 
             if isinstance(data, dict) and "choices" in data:
                 return data["choices"][0]["message"]["content"].strip()
             
-            return f"Unexpected Response Format: {str(data)[:200]}"
+            return f"Unexpected Response: {str(data)[:200]}"
+
         except Exception as e:
+            log.error(f"Attempt {attempt + 1} failed: {e}")
             if attempt < max_retries - 1:
                 time.sleep(10)
                 continue
-            return f"Summarization System Error: {e}"
-            
-def send_email(content):
-    if not content or "Summarization Error" in str(content):
-        log.error("Content invalid or contains error. Skipping email send.")
-        return
-
-    import smtplib
-    from email.mime.text import MIMEText
-    from email.mime.multipart import MIMEMultipart
-    
-    try:
-        msg = MIMEMultipart()
-        msg['From'] = f"{SENDER_NAME} <{SENDER_EMAIL}>"
-        msg['To'] = EMAIL_TO
-        msg['Subject'] = f"NM Weekly Digest — {datetime.now().strftime('%Y-%m-%d')}"
-        msg.attach(MIMEText(str(content), 'plain'))
-        
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            server.starttls()
-            server.login(SMTP_USER, SMTP_PASS)
-            server.send_message(msg)
-            log.info("Email sent successfully!")
-    except Exception as e:
-        log.error(f"Failed to send email: {e}")
-
+            return f"System Error: {e}"
 # ---------------------------------------------------------------------------
 # 5. Main Execution
 # ---------------------------------------------------------------------------
