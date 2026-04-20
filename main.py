@@ -197,10 +197,10 @@ def summarize(entries):
     for attempt in range(max_retries):
         try:
             # FORCE the absolute correct Google OpenAI-compatible path
-            # We ignore LLM_BASE_URL entirely here to ensure stability
+           # We are bypassing the ENV variable entirely because it's causing 404s
             url = "https://generativelanguage.googleapis.com/v1beta/openai/v1/chat/completions"
             
-            log.info(f"AI Attempt {attempt + 1}. Forced Endpoint: {url}")
+            log.info(f"AI Attempt {attempt + 1}. Hardcoded URL: {url}")
             
             resp = httpx.post(
                 url,
@@ -239,6 +239,32 @@ def summarize(entries):
                 continue
             return f"System Error: {e}"
 # ---------------------------------------------------------------------------
+    
+def send_email(content):
+    if not content or "Error" in str(content):
+        log.error("Invalid content. Skipping email.")
+        return
+    
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = f"{SENDER_NAME} <{SENDER_EMAIL}>"
+        msg['To'] = EMAIL_TO
+        msg['Subject'] = f"NM Weekly Digest — {datetime.now().strftime('%Y-%m-%d')}"
+        msg.attach(MIMEText(str(content), 'plain'))
+        
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_USER, SMTP_PASS)
+            server.send_message(msg)
+            log.info("Email sent successfully!")
+    except Exception as e:
+        log.error(f"SMTP Error: {e}")
+# ------------------------------
+
 # 5. Main Execution
 # ---------------------------------------------------------------------------
 def main():
