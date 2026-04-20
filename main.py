@@ -140,7 +140,7 @@ def fetch_html_tenders(url, source_name):
 # 4. AI & Email
 # ---------------------------------------------------------------------------
 def summarize(entries):
-   # 1. Flatten and Validate Input
+    # 1. Flatten and Validate Input
     clean_entries = []
     for item in entries:
         if isinstance(item, list):
@@ -160,7 +160,7 @@ def summarize(entries):
         articles_text += f"TITLE: {e.get('title', 'No Title')}\n"
         articles_text += f"URL: {e.get('link', '')}\n\n"
 
-    # 3. The Prompt
+    # 3. The Prompt (Preserving your full Strategic structure)
     prompt = f"""You are a senior Business Development Manager for a QS firm.
     
     To: Senior Partners / Board of Directors
@@ -197,7 +197,7 @@ def summarize(entries):
     Articles:
     {articles_text}"""
 
- # 4. API Call with Safety Check
+    # 4. API Call with Advanced Safety Checks
     try:
         log.info(f"Sending {len(clean_entries)} items to Gemini...")
         resp = httpx.post(
@@ -214,21 +214,32 @@ def summarize(entries):
             timeout=300 # 5 Minute Timeout
         )
         
-        # --- THE SAFETY CHECK (Fixes the Index Error) ---
+        # --- IMPROVED SAFETY CHECK ---
         data = resp.json()
         
-        # Check if 'choices' exists in the response
-        if "choices" in data and len(data["choices"]) > 0:
-            return data["choices"][0]["message"]["content"].strip()
+        # Check if data is actually a dictionary before using .get()
+        if not isinstance(data, dict):
+            log.error(f"Unexpected response format: {type(data)}")
+            return f"Summarization Error: API returned {type(data)} instead of dictionary. Content: {str(data)[:200]}"
+
+        # Check if 'choices' exists and is a valid list
+        choices = data.get("choices")
+        if choices and isinstance(choices, list) and len(choices) > 0:
+            return choices[0].get("message", {}).get("content", "No content returned.").strip()
         else:
-            # If AI returns an error (like 'Invalid API Key' or 'Overloaded')
-            error_msg = data.get("error", {}).get("message", "Unknown AI Error")
+            # Safely extract error message from the dictionary
+            error_info = data.get("error")
+            if isinstance(error_info, dict):
+                error_msg = error_info.get("message", "Unknown API error structure")
+            else:
+                error_msg = str(error_info) if error_info else "Unknown Error"
+                
             log.error(f"AI API Error: {error_msg}")
             return f"Summarization Error from AI: {error_msg}"
 
     except Exception as e: 
         log.error(f"Network/System Error: {e}")
-        return f"Summarization System Error: {e}"
+        return f"Summarization System Error: {str(e)}"
         
 def send_email(content):
     import smtplib
