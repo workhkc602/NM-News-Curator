@@ -204,10 +204,6 @@ def summarize(entries):
     for attempt in range(max_retries):
         try:
             log.info(f"AI Attempt {attempt + 1} for {len(clean_entries)} items...")
-            
-            # Temporary debug line - delete after it works!
-log.info(f"DEBUG: Using Base URL: {LLM_BASE_URL}")
-
             resp = httpx.post(
                 f"{LLM_BASE_URL.strip().rstrip('/')}/chat/completions",
                 headers={"Authorization": f"Bearer {LLM_API_KEY}", "Content-Type": "application/json"},
