@@ -25,8 +25,6 @@ def get_env(name: str, default: str = None):
 
 LLM_API_KEY = get_env("LLM_API_KEY")
 LLM_BASE_URL = get_env("LLM_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/")
-
-# Change from 'gemini-3-flash-preview' to the stable version
 LLM_MODEL = get_env("LLM_MODEL", "gemini-1.5-flash")
 
 SMTP_HOST = get_env("SMTP_HOST", "smtp.gmail.com")
@@ -39,7 +37,7 @@ SENDER_NAME = get_env("SENDER_NAME", "NM News Curator")
 HOURS_LOOKBACK = int(get_env("HOURS_LOOKBACK", "160"))
 
 # ---------------------------------------------------------------------------
-# 2. Keywords
+# 2. Keywords & Helpers
 # ---------------------------------------------------------------------------
 NM_MARKERS = [
     "Northern Metropolis", "北部都會區", "Four Zones", "NM Highway", "Metropolis Highway",
@@ -84,14 +82,13 @@ def is_expired(text):
     return False
 
 # ---------------------------------------------------------------------------
-# 3. Scraping
+# 3. Scraping Functions
 # ---------------------------------------------------------------------------
 def fetch_rss(url, source_name, source_type):
     headers = {"User-Agent": "Mozilla/5.0"}
     entries = []
     now = datetime.now(timezone.utc)
     threshold = now - timedelta(hours=HOURS_LOOKBACK)
-
     try:
         with httpx.Client(headers=headers, follow_redirects=True, timeout=20.0) as client:
             response = client.get(url)
@@ -100,13 +97,11 @@ def fetch_rss(url, source_name, source_type):
                 published_time = None
                 if hasattr(e, 'published_parsed') and e.published_parsed:
                     published_time = datetime.fromtimestamp(time.mktime(e.published_parsed), timezone.utc)
-                
                 if published_time and published_time < threshold:
                     continue 
-
                 entries.append({
                     "title": e.get("title", ""), 
-                    "body": e.get("summary", ""), # ADDED THIS FOR FILTERING
+                    "body": e.get("summary", ""), 
                     "link": e.get("link", ""), 
                     "source_type": source_type, 
                     "source_name": source_name
@@ -139,10 +134,9 @@ def fetch_html_tenders(url, source_name):
     except: return []
 
 # ---------------------------------------------------------------------------
-# 4. AI & Email
+# 4. AI & Email Logic
 # ---------------------------------------------------------------------------
 def summarize(entries):
-   def summarize(entries):
     # 1. Flatten and Validate Input
     clean_entries = []
     for item in entries:
@@ -165,34 +159,32 @@ def summarize(entries):
 
     # 3. The Prompt
     prompt = f"""You are a senior Business Development Manager for a QS firm.
-    
     To: Senior Partners / Board of Directors
     From: NM News Curator
     Date: {datetime.now().strftime('%B %d, %Y')}
     Subject: Northern Metropolis (NM) & Major Projects: Opportunity Pipeline Report
 
-    CRITICAL: Since this is a weekly digest, start with a 3-bullet point 'Executive Strategic Summary' highlighting the single most important tender, the most impactful policy change, and the biggest media trend from the past 7 days.
+    CRITICAL: Since this is a weekly digest, start with a 3-bullet point 'Executive Strategic Summary'.
 
     STRATEGIC FOCUS SECTORS:
-    The firm actively pursues leads in these sectors. For any project found, categorize it under one of these:
     - Transport and Infrastructure
     - Residential / Public Housing
     - Commercial / Corporate Fitouts
-    - Retail / Hospitality (Includes Canteens, Catering, and Tenancies)
+    - Retail / Hospitality
     - Healthcare / Education
     - Industrial / Data Centre
     - Maintenance / Energy
 
     CATEGORIES TO ORGANIZE BY:
-    1. "### Upcoming Tenders & Consultancy Notices" (Source type: tender)
-    2. "### HKSAR Gov Press Releases" (Source name: Gov Press)
-    3. "### NM Development News from Various Media" (Source type: news/youtube)
+    1. "### Upcoming Tenders & Consultancy Notices"
+    2. "### HKSAR Gov Press Releases"
+    3. "### NM Development News from Various Media"
 
     RULES:
-    - Analyze every entry through a QS lens (cost estimation, procurement, contract management, or tenancy valuation).
+      - Analyze every entry through a QS lens (cost estimation, procurement, contract management, or tenancy valuation).
     - FORMATTING: Each bullet point MUST follow this structure:
-      * **QS Lead:** [Detailed QS-specific insight]
-        **Sector:** [Chosen Strategic Sector]
+      * *QS Lead:* [Detailed QS-specific insight]
+        *Sector:* [Chosen Strategic Sector]
         [Detailed explanation of the technical components, e.g., MEP, cleanroom, or A&A value.]
         [View Source Detail >](URL)
     - Omit expired dates. Add an extra empty line between different bullet points.
@@ -200,32 +192,21 @@ def summarize(entries):
     Articles:
     {articles_text}"""
 
-  # 4. API Call with Corrected Indentation & URL
+    # 4. API Call with Retry Logic
     max_retries = 3
     for attempt in range(max_retries):
         try:
             log.info(f"AI Attempt {attempt + 1}. Using Base URL: {LLM_BASE_URL}")
-            
-            # The combination of v1beta/openai + /v1/chat/completions is the winner
             url = f"{LLM_BASE_URL.strip().rstrip('/')}/v1/chat/completions"
             
             resp = httpx.post(
                 url,
-                headers={
-                    "Authorization": f"Bearer {LLM_API_KEY}", 
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": LLM_MODEL, 
-                    "messages": [{"role": "user", "content": prompt}], 
-                    "temperature": 0.1
-                }, 
+                headers={"Authorization": f"Bearer {LLM_API_KEY}", "Content-Type": "application/json"},
+                json={"model": LLM_MODEL, "messages": [{"role": "user", "content": prompt}], "temperature": 0.1},
                 timeout=300
             )
-            
             data = resp.json()
 
-            # Handle errors from API
             if isinstance(data, dict) and "error" in data:
                 error_code = data.get("error", {}).get("code")
                 if error_code in [429, 503] and attempt < max_retries - 1:
@@ -237,29 +218,44 @@ def summarize(entries):
                 return data["choices"][0]["message"]["content"].strip()
             
             return f"Unexpected Response Format: {str(data)[:200]}"
-
         except Exception as e:
             if attempt < max_retries - 1:
                 time.sleep(10)
                 continue
             return f"Summarization System Error: {e}"
-        
+
 def send_email(content):
+    if not content or "Summarization Error" in str(content):
+        log.error("Content invalid or contains error. Skipping email send.")
+        return
+
     import smtplib
     from email.mime.text import MIMEText
     from email.mime.multipart import MIMEMultipart
-    msg = MIMEMultipart(); msg['From'] = f"{SENDER_NAME} <{SENDER_EMAIL}>"
-    msg['To'] = EMAIL_TO; msg['Subject'] = f"NM Industry Digest — {datetime.now().strftime('%Y-%m-%d')}"
-    msg.attach(MIMEText(content, 'plain'))
-    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-        server.starttls(); server.login(SMTP_USER, SMTP_PASS); server.send_message(msg)
+    
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = f"{SENDER_NAME} <{SENDER_EMAIL}>"
+        msg['To'] = EMAIL_TO
+        msg['Subject'] = f"NM Weekly Digest — {datetime.now().strftime('%Y-%m-%d')}"
+        msg.attach(MIMEText(str(content), 'plain'))
+        
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_USER, SMTP_PASS)
+            server.send_message(msg)
+            log.info("Email sent successfully!")
+    except Exception as e:
+        log.error(f"Failed to send email: {e}")
 
+# ---------------------------------------------------------------------------
+# 5. Main Execution
+# ---------------------------------------------------------------------------
 def main():
     try:
         log.info("Starting NM-Omni Scraper...")
         all_entries = []
         
-        # --- PART A: Tenders ---
         tender_targets = [
             ("CEDD NM", "https://www.cedd.gov.hk/eng/our-projects/northern-metropolis/index.html"),
             ("HKHA Commercial", "https://www.housingauthority.gov.hk/en/commercial-properties/tender-notices-and-awards/index.html"),
@@ -274,66 +270,49 @@ def main():
         for name, url in tender_targets:
             all_entries.extend(fetch_html_tenders(url, name))
 
-        # --- PART B: News (JSON) ---
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        sources_path = os.path.join(base_dir, 'sources.json')
+        sources_path = os.path.join(os.path.dirname(__file__), 'sources.json')
         if os.path.exists(sources_path):
             with open(sources_path, 'r', encoding='utf-8') as f:
                 rss_sources = json.load(f)
                 for s in rss_sources:
                     all_entries.extend(fetch_rss(s['url'], s['name'], s['category']))
 
-    # --- PART C: The Recursive Flattener (The Nuke Fix) ---
+        # Recursive Flattener
         def flatten(items):
             flat = []
             for i in items:
-                if isinstance(i, list):
-                    flat.extend(flatten(i))
-                elif isinstance(i, dict):
-                    flat.append(i)
+                if isinstance(i, list): flat.extend(flatten(i))
+                elif isinstance(i, dict): flat.append(i)
             return flat
 
-        # Force all_entries to be a flat list of dictionaries
         clean_list = flatten(all_entries)
-
         filtered = []
         for e in clean_list:
-            # We now know 'e' MUST be a dictionary because of the flattener
             s_type = e.get('source_type', 'news')
-            
             if s_type == 'tender':
                 filtered.append(e)
             else:
                 title = str(e.get('title', ''))
-                # Handle cases where 'body' might be missing entirely
                 body = str(e.get('body', e.get('summary', ''))) 
                 search_text = (title + " " + body).lower()
-                
                 if any(m.lower() in search_text for m in NM_MARKERS):
-                    # Create a clean version for the AI without the bulky body
-                    ai_entry = {
+                    filtered.append({
                         "title": e.get('title'),
                         "link": e.get('link'),
                         "source_name": e.get('source_name'),
                         "source_type": s_type
-                    }
-                    filtered.append(ai_entry)
+                    })
 
-        # --- PART D: Priority Sort, Cap, and Summarize ---
         if filtered:
-            # Sort: Tenders first
             filtered.sort(key=lambda x: 0 if x.get('source_type') == 'tender' else 1)
-            
-            # Keep only the top 25 items
             final_selection = filtered[:25]
-            
-            log.info(f"📊 Sending top {len(final_selection)} of {len(filtered)} items to AI.")
-            
+            log.info(f"Sending {len(final_selection)} items to AI.")
             digest = summarize(final_selection)
-            send_email(digest)
-            log.info("✅ Weekly Digest Processed.")
+            if digest:
+                send_email(digest)
+                log.info("Process complete.")
         else:
-            log.info("No relevant items found in the 160-hour window.")
+            log.info("No relevant items found in this lookback window.")
 
     except Exception as e:
         log.error(f"CRITICAL SCRIPT ERROR: {str(e)}", exc_info=True)
