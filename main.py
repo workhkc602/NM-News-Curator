@@ -156,12 +156,14 @@ def summarize(entries):
         articles_text += f"URL: {e.get('link', '')}\n\n"
 
     prompt = f"""You are a senior Business Development Manager for a QS firm.
+    
+    Start with the following:
     To: Senior Partners / Board of Directors
     From: NM News Curator
     Date: {datetime.now().strftime('%B %d, %Y')}
     Subject: Northern Metropolis (NM) & Major Projects: Opportunity Pipeline Report
 
-    CRITICAL: Since this is a weekly digest, start with a 3-bullet point 'Executive Strategic Summary'.
+    CRITICAL: Since this is a weekly digest, follow the Subject by a 3-bullet point 'Executive Strategic Summary'. Add an extra empty line in between Subject and the 'Excecutive Strategic Summary'.
 
     STRATEGIC FOCUS SECTORS:
     - Transport and Infrastructure
