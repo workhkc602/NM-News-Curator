@@ -192,50 +192,45 @@ def summarize(entries):
     Articles:
     {articles_text}"""
 
-# 4. API Call with NATIVE Stability
+# 4. API Call via OpenRouter
     max_retries = 3
     for attempt in range(max_retries):
         try:
-            # We use the v1beta path which is most compatible with 1.5 Flash
-            url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+            # OpenRouter uses the standard OpenAI chat completions path
+            url = f"{LLM_BASE_URL}/chat/completions"
             
-            log.info(f"AI Attempt {attempt + 1}. Endpoint: {url}")
+            log.info(f"AI Attempt {attempt + 1}. Routing via OpenRouter: {LLM_MODEL}")
             
             resp = httpx.post(
                 url,
-                # Moving the API Key to the x-goog-api-key header for better stability
                 headers={
+                    "Authorization": f"Bearer {LLM_API_KEY}",
                     "Content-Type": "application/json",
-                    "x-goog-api-key": LLM_API_KEY 
+                    # OpenRouter specific headers (Required)
+                    "HTTP-Referer": "https://github.com/your-repo-name", 
+                    "X-Title": "NM News Curator",
                 },
                 json={
-                    "contents": [{
-                        "parts": [{"text": prompt}]
-                    }],
-                    "generationConfig": {
-                        "temperature": 0.1,
-                        "maxOutputTokens": 4096
-                    }
+                    "model": LLM_MODEL,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.1
                 }, 
                 timeout=300
             )
             
             if resp.status_code != 200:
-                log.error(f"Google Native API Error Status: {resp.status_code}")
-                log.error(f"Response Detail: {resp.text}")
+                log.error(f"OpenRouter Error {resp.status_code}: {resp.text}")
                 if attempt < max_retries - 1:
                     time.sleep(15)
                     continue
-                return f"Summarization Error (HTTP {resp.status_code})"
+                return f"Summarization Error: {resp.status_code}"
 
             data = resp.json()
-            try:
-                return data['candidates'][0]['content']['parts'][0]['text'].strip()
-            except (KeyError, IndexError, TypeError):
-                return f"Unexpected Format: {str(data)[:200]}"
+            # OpenRouter follows the OpenAI response format
+            return data['choices'][0]['message']['content'].strip()
 
         except Exception as e:
-            log.error(f"Attempt {attempt + 1} failed: {e}")
+            log.error(f"OpenRouter Attempt {attempt + 1} failed: {e}")
             if attempt < max_retries - 1:
                 time.sleep(10)
                 continue
