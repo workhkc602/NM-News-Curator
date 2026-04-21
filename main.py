@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# 1. Configuration
+# 1. Configuration & Global Keywords
 # ---------------------------------------------------------------------------
 def get_env(name: str, default: str = None):
     value = os.environ.get(name)
@@ -22,6 +22,28 @@ def get_env(name: str, default: str = None):
         if default is not None: return default
         raise KeyError(f"Missing environment variable: {name}")
     return value
+
+# Global Keywords - Moved here so all functions can see them
+BIZ_MARKERS = [
+    "Tender", "招標", "Contract", "合約", "Consultancy", "顧問", 
+    "EOI", "Forecast", "Expression of Interest", "Technical and Fee Proposal", 
+    "Land Sale", "賣地", "片區開發", "Fitting-out", "Fit-out", "Renovation", 
+    "翻新", "Tenancy", "租賃", "License", "牌照", "Design and Build", "D&B", 
+    "Alteration", "Addition", "A&A", "Maintenance", "Repair"
+]
+
+NM_MARKERS = [
+    "Northern Metropolis", "北部都會區", "Four Zones", "NM Highway", "Metropolis Highway",
+    "San Tin Technopole", "新田科技城", "Innovation and Technology Zone", "I&T Zone",
+    "High-end Professional Services", "Logistics Hub", "Boundary Commerce",
+    "Blue and Green Recreation", "University Town", "大學城", "UniTown",
+    "Kwu Tung", "古洞", "Fanling North", "粉嶺北", "Hung Shui Kiu", "洪水橋", "HSK",
+    "Ha Tsuen", "廈村", "Yuen Long South", "元朗南", "Lok Ma Chau", "落馬洲", "Hetao", "河套",
+    "HSITP", "Ngau Tam Mei", "牛潭尾", "Ma Tso Lung", "馬草壟", "Sandy Ridge", "沙嶺",
+    "Lau Fau Shan", "流浮山", "New Territories North", "新界北",
+    "Northern Link", "北環綫", "NOL", "Central Rail Link", "中鐵綫", "Western Railway",
+    "YL/20", "ND/20", "CE 16/20", "CE 8/20", "CE 9/20", "CE 14/20", "SS R50"
+]
 
 LLM_API_KEY = get_env("LLM_API_KEY")
 LLM_BASE_URL = get_env("LLM_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/")
@@ -37,16 +59,8 @@ SENDER_NAME = get_env("SENDER_NAME", "NM News Curator")
 HOURS_LOOKBACK = int(get_env("HOURS_LOOKBACK", "160"))
 
 # ---------------------------------------------------------------------------
-# 2. Keywords & Helpers
+# 2. Helpers
 # ---------------------------------------------------------------------------
-BIZ_MARKERS = [
-   "Tender", "招標", "Contract", "合約", "Consultancy", "顧問", 
-    "EOI", "Forecast", "Expression of Interest", "Technical and Fee Proposal", 
-    "Land Sale", "賣地", "片區開發", "Fitting-out", "Fit-out", "Renovation", 
-    "翻新", "Tenancy", "租賃", "License", "牌照", "Design and Build", "D&B", 
-    "Alteration", "Addition", "A&A", "Maintenance", "Repair"
-]
-
 def is_expired(text):
     date_patterns = [
         r'(\d{1,2})[\/\-\. ](\d{1,2})[\/\-\. ](\d{4})',
@@ -94,8 +108,8 @@ def fetch_rss(url, source_name, source_type):
                     "source_name": source_name
                 })
         return entries
-    except Exception as e:
-        log.error(f"Error fetching {source_name}: {e}")
+    except Exception as ex:
+        log.error(f"Error fetching {source_name}: {ex}")
         return []
 
 def fetch_html_tenders(url, source_name):
@@ -108,23 +122,21 @@ def fetch_html_tenders(url, source_name):
             for tag in soup.find_all('a', href=True):
                 text = tag.get_text().strip()
                 href = tag['href']
+                # Now correctly accesses global BIZ_MARKERS and NM_MARKERS
                 if any(k.lower() in text.lower() for k in BIZ_MARKERS) and len(text) > 10:
                     if any(m.lower() in text.lower() for m in NM_MARKERS):
                         if is_expired(text): continue
                         full_url = urljoin(url, href)
-                        try:
-                            check = client.head(full_url, timeout=5.0)
-                            if check.status_code >= 400: continue
-                        except: continue
                         entries.append({"title": text, "link": full_url, "source_type": "tender", "source_name": source_name})
         return entries
-    except: return []
+    except Exception as ex:
+        log.error(f"HTML Scrape Error for {source_name}: {ex}")
+        return []
 
 # ---------------------------------------------------------------------------
 # 4. AI & Email Logic
 # ---------------------------------------------------------------------------
 def summarize(entries):
-    # 1. Flatten and Validate Input (Exact same as your version)
     clean_entries = []
     for item in entries:
         if isinstance(item, list):
@@ -135,7 +147,6 @@ def summarize(entries):
     if not clean_entries:
         return "No valid data found to summarize."
 
-    # 2. Build the Articles Text (Exact same as your version)
     articles_text = ""
     for i, e in enumerate(clean_entries):
         articles_text += f"ENTRY #{i+1}\n"
@@ -144,7 +155,6 @@ def summarize(entries):
         articles_text += f"TITLE: {e.get('title', 'No Title')}\n"
         articles_text += f"URL: {e.get('link', '')}\n\n"
 
-    # 3. The Prompt (All strategic sectors and rules preserved)
     prompt = f"""You are a senior Business Development Manager for a QS firm.
     To: Senior Partners / Board of Directors
     From: NM News Curator
@@ -168,7 +178,7 @@ def summarize(entries):
     3. "### NM Development News from Various Media"
 
     RULES:
-      - Analyze every entry through a QS lens (cost estimation, procurement, contract management, or tenancy valuation).
+    - Analyze every entry through a QS lens (cost estimation, procurement, contract management, or tenancy valuation).
     - FORMATTING: Each bullet point MUST follow this structure:
       * *QS Lead:* [Detailed QS-specific insight]
         *Sector:* [Chosen Strategic Sector]
@@ -179,51 +189,44 @@ def summarize(entries):
     Articles:
     {articles_text}"""
 
-# 4. API Call via OpenRouter
     max_retries = 3
     for attempt in range(max_retries):
         try:
-            # OpenRouter uses the standard OpenAI chat completions path
             url = f"{LLM_BASE_URL}/chat/completions"
-            
-            log.info(f"AI Attempt {attempt + 1}. Routing via OpenRouter: {LLM_MODEL}")
+            log.info(f"AI Attempt {attempt + 1}. Routing via: {LLM_MODEL}")
             
             resp = httpx.post(
                 url,
                 headers={
                     "Authorization": f"Bearer {LLM_API_KEY}",
                     "Content-Type": "application/json",
-                    # OpenRouter specific headers (Required)
-                    "HTTP-Referer": "https://github.com/your-repo-name", 
-                    "X-Title": "NM News Curator",
                 },
                 json={
                     "model": LLM_MODEL,
-                    "messages": [{"role": "user", "content": prompt}],
+                    "messages": [{"role": "system", "content": "You are a helpful assistant."},
+                                 {"role": "user", "content": prompt}],
                     "temperature": 0.1
                 }, 
                 timeout=300
             )
             
             if resp.status_code != 200:
-                log.error(f"OpenRouter Error {resp.status_code}: {resp.text}")
+                log.error(f"AI Error {resp.status_code}: {resp.text}")
                 if attempt < max_retries - 1:
                     time.sleep(15)
                     continue
                 return f"Summarization Error: {resp.status_code}"
 
             data = resp.json()
-            # OpenRouter follows the OpenAI response format
             return data['choices'][0]['message']['content'].strip()
 
         except Exception as e:
-            log.error(f"OpenRouter Attempt {attempt + 1} failed: {e}")
+            log.error(f"AI Attempt {attempt + 1} failed: {e}")
             if attempt < max_retries - 1:
                 time.sleep(10)
                 continue
             return f"System Error: {e}"
-# ---------------------------------------------------------------------------
-    
+
 def send_email(content):
     if not content or "Error" in str(content):
         log.error("Invalid content. Skipping email.")
@@ -247,17 +250,15 @@ def send_email(content):
             log.info("Email sent successfully!")
     except Exception as e:
         log.error(f"SMTP Error: {e}")
-# ------------------------------
 
+# ---------------------------------------------------------------------------
 # 5. Main Execution
 # ---------------------------------------------------------------------------
-
 def main():
     try:
         log.info("Starting NM-Omni Scraper...")
         all_entries = []
         
-        # 1. 2026 TENDER TARGETS
         tender_targets = [
             ("NM Portal", "https://www.nm.gov.hk/en/tender-contracts"),
             ("HKHA Commercial", "https://www.housingauthority.gov.hk/en/commercial-properties/tender-notices-and-awards/index.html"),
@@ -268,20 +269,6 @@ def main():
             ("HKBU", "https://fohome.hkbu.edu.hk/for-suppliers/information/tender-notice.html"),
             ("HSUHK", "https://fo.hsu.edu.hk/supplier/tender-notice/"),
             ("EdUHK Projects", "https://www.eduhk.hk/eo/our-projects")
-        ]
-
-        # 2. YOUR COMPLETE BILINGUAL NM MARKERS
-        NM_MARKERS = [
-            "Northern Metropolis", "北部都會區", "Four Zones", "NM Highway", "Metropolis Highway",
-            "San Tin Technopole", "新田科技城", "Innovation and Technology Zone", "I&T Zone",
-            "High-end Professional Services", "Logistics Hub", "Boundary Commerce",
-            "Blue and Green Recreation", "University Town", "大學城", "UniTown",
-            "Kwu Tung", "古洞", "Fanling North", "粉嶺北", "Hung Shui Kiu", "洪水橋", "HSK",
-            "Ha Tsuen", "廈村", "Yuen Long South", "元朗南", "Lok Ma Chau", "落馬洲", "Hetao", "河套",
-            "HSITP", "Ngau Tam Mei", "牛潭尾", "Ma Tso Lung", "馬草壟", "Sandy Ridge", "沙嶺",
-            "Lau Fau Shan", "流浮山", "New Territories North", "新界北",
-            "Northern Link", "北環綫", "NOL", "Central Rail Link", "中鐵綫", "Western Railway",
-            "YL/20", "ND/20", "CE 16/20", "CE 8/20", "CE 9/20", "CE 14/20", "SS R50"
         ]
 
         # Scrape Tenders
@@ -295,12 +282,10 @@ def main():
                 rss_sources = json.load(f)
                 for s in rss_sources:
                     fetched_news = fetch_rss(s['url'], s['name'], s['category'])
-                    # Tag RSS as news explicitly so they don't appear in Tender section
                     for item in fetched_news:
                         item['source_type'] = 'news'  
                     all_entries.extend(fetched_news)
 
-        # Recursive Flattener
         def flatten(items):
             flat = []
             for i in items:
@@ -312,38 +297,35 @@ def main():
         log.info(f"Total entries scraped: {len(clean_list)}")
         
         filtered = []
-        # 3. SMARTER TRIAGE LOGIC
         for e in clean_list:
-            # Type safety: Wrap in str() to prevent crashes if scrape returns None
             title = str(e.get('title', ''))
             body = str(e.get('body', e.get('summary', '')))
             search_text = f"{title} {body}".lower()
             
-            # Check for NM relevance
             is_nm_relevant = any(m.lower() in search_text for m in NM_MARKERS)
-
             if is_nm_relevant:
                 filtered.append(e)
 
         log.info(f"Entries matching NM markers: {len(filtered)}")
 
         if filtered:
-            # Prioritize official portals in the sorting
             govt_portals = [t[0] for t in tender_targets]
             filtered.sort(key=lambda x: 0 if x.get('source_name') in govt_portals else 1)
             
             final_selection = filtered[:35] 
-            log.info(f"Sending {len(final_selection)} items to AI for summarization.")
+            log.info(f"Sending {len(final_selection)} items to AI.")
             
             digest = summarize(final_selection)
-            
             if digest and "Error" not in str(digest):
                 send_email(digest)
                 log.info("Process complete: Email sent.")
             else:
                 log.warning("AI Summary returned nothing or an error.")
         else:
-            log.warning("Workflow finished: 0 items matched NM markers. No email to send.")
+            log.warning("Workflow finished: 0 items matched NM markers.")
 
     except Exception as e:
         log.error(f"CRITICAL SCRIPT ERROR: {str(e)}", exc_info=True)
+
+if __name__ == "__main__":
+    main()
