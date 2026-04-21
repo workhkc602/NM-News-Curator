@@ -257,7 +257,7 @@ def main():
         log.info("Starting NM-Omni Scraper...")
         all_entries = []
         
-        # 1. 2026 TENDER TARGETS (Refreshed for April 2026)
+        # 1. 2026 TENDER TARGETS
         tender_targets = [
             ("NM Portal", "https://www.nm.gov.hk/en/tender-contracts"),
             ("HKHA Commercial", "https://www.housingauthority.gov.hk/en/commercial-properties/tender-notices-and-awards/index.html"),
@@ -284,19 +284,20 @@ def main():
             "YL/20", "ND/20", "CE 16/20", "CE 8/20", "CE 9/20", "CE 14/20", "SS R50"
         ]
 
-        # Scrape Tenders (Direct Government/Entity Portals)
+        # Scrape Tenders
         for name, url in tender_targets:
             all_entries.extend(fetch_html_tenders(url, name))
 
-        # Scrape RSS (News) - Explicitly tag as news to avoid misclassification
+        # Scrape RSS (News)
         sources_path = os.path.join(os.path.dirname(__file__), 'sources.json')
         if os.path.exists(sources_path):
             with open(sources_path, 'r', encoding='utf-8') as f:
                 rss_sources = json.load(f)
                 for s in rss_sources:
                     fetched_news = fetch_rss(s['url'], s['name'], s['category'])
+                    # Tag RSS as news explicitly so they don't appear in Tender section
                     for item in fetched_news:
-                        item['source_type'] = 'news'  # Guardrail: Force news type
+                        item['source_type'] = 'news'  
                     all_entries.extend(fetched_news)
 
         # Recursive Flattener
@@ -308,10 +309,12 @@ def main():
             return flat
 
         clean_list = flatten(all_entries)
+        log.info(f"Total entries scraped: {len(clean_list)}")
+        
         filtered = []
-
         # 3. SMARTER TRIAGE LOGIC
         for e in clean_list:
+            # Type safety: Wrap in str() to prevent crashes if scrape returns None
             title = str(e.get('title', ''))
             body = str(e.get('body', e.get('summary', '')))
             search_text = f"{title} {body}".lower()
@@ -322,26 +325,25 @@ def main():
             if is_nm_relevant:
                 filtered.append(e)
 
+        log.info(f"Entries matching NM markers: {len(filtered)}")
+
         if filtered:
-            # List of names from our tender_targets for sorting priority
+            # Prioritize official portals in the sorting
             govt_portals = [t[0] for t in tender_targets]
-            
-            # Sort: Priority 0 for Govt/Entity Portals, Priority 1 for Media/RSS
             filtered.sort(key=lambda x: 0 if x.get('source_name') in govt_portals else 1)
             
-            # Increased buffer to 35 items
             final_selection = filtered[:35] 
+            log.info(f"Sending {len(final_selection)} items to AI for summarization.")
             
-            log.info(f"Filtered {len(filtered)} items. Sending {len(final_selection)} to AI.")
             digest = summarize(final_selection)
             
-            if digest and "Error" not in digest:
+            if digest and "Error" not in str(digest):
                 send_email(digest)
-                log.info("Email sent successfully. Process complete.")
+                log.info("Process complete: Email sent.")
             else:
-                log.warning("AI Summary failed or returned error. Email aborted.")
+                log.warning("AI Summary returned nothing or an error.")
         else:
-            log.info("No items matching your NM markers found.")
+            log.warning("Workflow finished: 0 items matched NM markers. No email to send.")
 
     except Exception as e:
         log.error(f"CRITICAL SCRIPT ERROR: {str(e)}", exc_info=True)
