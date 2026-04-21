@@ -192,7 +192,7 @@ def summarize(entries):
     Articles:
     {articles_text}"""
 
-  # 4. API Call with NATIVE Stability
+# 4. API Call with NATIVE Stability
     max_retries = 3
     for attempt in range(max_retries):
         try:
