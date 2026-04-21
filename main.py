@@ -163,7 +163,7 @@ def summarize(entries):
     Date: {datetime.now().strftime('%B %d, %Y')}
     Subject: Northern Metropolis (NM) & Major Projects: Opportunity Pipeline Report
 
-    CRITICAL: Since this is a weekly digest, follow the Subject by a 3-bullet point 'Executive Strategic Summary'. Add an extra empty line in between Subject and the 'Excecutive Strategic Summary'.
+    CRITICAL: Since this is a weekly digest, include a 3-bullet point 'Executive Strategic Summary' before listing the entries. Add an extra empty line before this summary.
 
     STRATEGIC FOCUS SECTORS:
     - Transport and Infrastructure
