@@ -39,19 +39,6 @@ HOURS_LOOKBACK = int(get_env("HOURS_LOOKBACK", "160"))
 # ---------------------------------------------------------------------------
 # 2. Keywords & Helpers
 # ---------------------------------------------------------------------------
-NM_MARKERS = [
-    "Northern Metropolis", "北部都會區", "Four Zones", "NM Highway", "Metropolis Highway",
-    "San Tin Technopole", "新田科技城", "Innovation and Technology Zone", "I&T Zone",
-    "High-end Professional Services", "Logistics Hub", "Boundary Commerce",
-    "Blue and Green Recreation", "University Town", "大學城", "UniTown",
-    "Kwu Tung", "古洞", "Fanling North", "粉嶺北", "Hung Shui Kiu", "洪水橋", "HSK",
-    "Ha Tsuen", "廈村", "Yuen Long South", "元朗南", "Lok Ma Chau", "落馬洲", "Hetao", "河套",
-    "HSITP", "Ngau Tam Mei", "牛潭尾", "Ma Tso Lung", "馬草壟", "Sandy Ridge", "沙嶺",
-    "Lau Fau Shan", "流浮山", "New Territories North", "新界北",
-    "Northern Link", "北環綫", "NOL", "Central Rail Link", "中鐵綫", "Western Railway",
-    "YL/20", "ND/20", "CE 16/20", "CE 8/20", "CE 9/20", "CE 14/20", "SS R50"
-]
-
 BIZ_MARKERS = [
    "Tender", "招標", "Contract", "合約", "Consultancy", "顧問", 
     "EOI", "Forecast", "Expression of Interest", "Technical and Fee Proposal", 
@@ -264,25 +251,45 @@ def send_email(content):
 
 # 5. Main Execution
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 def main():
     try:
         log.info("Starting NM-Omni Scraper...")
         all_entries = []
         
+        # 1. 2026 TENDER TARGETS (Refreshed for April 2026)
         tender_targets = [
-            ("CEDD NM", "https://www.cedd.gov.hk/eng/our-projects/northern-metropolis/index.html"),
+            ("NM Portal", "https://www.nm.gov.hk/en/tender-contracts"),
             ("HKHA Commercial", "https://www.housingauthority.gov.hk/en/commercial-properties/tender-notices-and-awards/index.html"),
             ("HKHA Business", "https://www.housingauthority.gov.hk/en/business-partnerships/tenders/index.html"),
-            ("ArchSD", "https://www.archsd.gov.hk/en/tenders-notices/consultancies/notices-of-invitation-for-technical-and-fee-proposal.html"),
+            ("ArchSD Forecast", "https://www.archsd.gov.hk/en/tenders-notices/consultancies/forecast-of-consultancies.html"),
             ("MTRC", "https://www.mtr.com.hk/en/corporate/tenders/new_projects.html"),
             ("HSITP Loop", "https://www.hsitp.org/en/tender-notices"),
             ("HKBU", "https://fohome.hkbu.edu.hk/for-suppliers/information/tender-notice.html"),
             ("HSUHK", "https://fo.hsu.edu.hk/supplier/tender-notice/"),
-            ("EdUHK", "https://www.eduhk.hk/tender_notice/")
+            ("EdUHK Projects", "https://www.eduhk.hk/eo/our-projects")
         ]
+
+        # 2. YOUR COMPLETE BILINGUAL NM MARKERS
+        NM_MARKERS = [
+            "Northern Metropolis", "北部都會區", "Four Zones", "NM Highway", "Metropolis Highway",
+            "San Tin Technopole", "新田科技城", "Innovation and Technology Zone", "I&T Zone",
+            "High-end Professional Services", "Logistics Hub", "Boundary Commerce",
+            "Blue and Green Recreation", "University Town", "大學城", "UniTown",
+            "Kwu Tung", "古洞", "Fanling North", "粉嶺北", "Hung Shui Kiu", "洪水橋", "HSK",
+            "Ha Tsuen", "廈村", "Yuen Long South", "元朗南", "Lok Ma Chau", "落馬洲", "Hetao", "河套",
+            "HSITP", "Ngau Tam Mei", "牛潭尾", "Ma Tso Lung", "馬草壟", "Sandy Ridge", "沙嶺",
+            "Lau Fau Shan", "流浮山", "New Territories North", "新界北",
+            "Northern Link", "北環綫", "NOL", "Central Rail Link", "中鐵綫", "Western Railway",
+            "YL/20", "ND/20", "CE 16/20", "CE 8/20", "CE 9/20", "CE 14/20", "SS R50"
+        ]
+
+        # Scrape Tenders
         for name, url in tender_targets:
             all_entries.extend(fetch_html_tenders(url, name))
 
+        # Scrape RSS (News)
         sources_path = os.path.join(os.path.dirname(__file__), 'sources.json')
         if os.path.exists(sources_path):
             with open(sources_path, 'r', encoding='utf-8') as f:
@@ -300,32 +307,39 @@ def main():
 
         clean_list = flatten(all_entries)
         filtered = []
+
+        # 3. SMARTER TRIAGE LOGIC
         for e in clean_list:
             s_type = e.get('source_type', 'news')
-            if s_type == 'tender':
+            title = str(e.get('title', ''))
+            body = str(e.get('body', e.get('summary', '')))
+            # Combined text for wider search coverage
+            search_text = f"{title} {body}".lower()
+            
+            # Check for NM relevance
+            is_nm_relevant = any(m.lower() in search_text for m in NM_MARKERS)
+
+            # We only keep items (Tender OR News) if they match your markers
+            if is_nm_relevant:
                 filtered.append(e)
-            else:
-                title = str(e.get('title', ''))
-                body = str(e.get('body', e.get('summary', ''))) 
-                search_text = (title + " " + body).lower()
-                if any(m.lower() in search_text for m in NM_MARKERS):
-                    filtered.append({
-                        "title": e.get('title'),
-                        "link": e.get('link'),
-                        "source_name": e.get('source_name'),
-                        "source_type": s_type
-                    })
 
         if filtered:
+            # Sort: Tenders at the top
             filtered.sort(key=lambda x: 0 if x.get('source_type') == 'tender' else 1)
-            final_selection = filtered[:25]
-            log.info(f"Sending {len(final_selection)} items to AI.")
+            
+            # Increased buffer to 35 items to ensure Llama sees a wide perspective
+            final_selection = filtered[:35] 
+            
+            log.info(f"Filtered {len(filtered)} items. Sending {len(final_selection)} to AI.")
             digest = summarize(final_selection)
-            if digest:
+            
+            if digest and "Error" not in digest:
                 send_email(digest)
-                log.info("Process complete.")
+                log.info("Email sent successfully. Process complete.")
+            else:
+                log.warning("AI Summary failed or returned error. Email aborted.")
         else:
-            log.info("No relevant items found in this lookback window.")
+            log.info("No items matching your NM markers found.")
 
     except Exception as e:
         log.error(f"CRITICAL SCRIPT ERROR: {str(e)}", exc_info=True)
