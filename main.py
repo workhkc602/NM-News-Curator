@@ -192,14 +192,15 @@ def summarize(entries):
     Articles:
     {articles_text}"""
 
-    # 4. API Call with NATIVE Stability (The crucial change)
+  # 4. API Call with NATIVE Stability
     max_retries = 3
     for attempt in range(max_retries):
         try:
-            # We switch to the NATIVE endpoint to kill the v1main error forever
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={LLM_API_KEY}"
+            # FIX: The model name in the URL must be 'models/gemini-1.5-flash'
+            model_id = "models/gemini-1.5-flash"
+            url = f"https://generativelanguage.googleapis.com/v1beta/{model_id}:generateContent?key={LLM_API_KEY}"
             
-            log.info(f"AI Attempt {attempt + 1}. Using Native Google Endpoint.")
+            log.info(f"AI Attempt {attempt + 1}. Calling Native Google API.")
             
             resp = httpx.post(
                 url,
@@ -210,6 +211,7 @@ def summarize(entries):
                     }],
                     "generationConfig": {
                         "temperature": 0.1,
+                        "topP": 0.95,
                         "maxOutputTokens": 4096
                     }
                 }, 
@@ -217,22 +219,24 @@ def summarize(entries):
             )
             
             if resp.status_code != 200:
-                log.error(f"Google API Error {resp.status_code}: {resp.text}")
+                log.error(f"Google Native API Error Status: {resp.status_code}")
+                # The log showed the 404 here because of the missing 'models/' prefix
                 if attempt < max_retries - 1:
                     time.sleep(15)
                     continue
-                return f"Summarization Error: {resp.status_code}"
+                return f"Summarization Error (HTTP {resp.status_code})"
 
             data = resp.json()
 
-            # 5. Native Response Parsing (Required because 'choices' doesn't exist in Native)
+            # 5. Native Response Parsing
             try:
                 return data['candidates'][0]['content']['parts'][0]['text'].strip()
-            except (KeyError, IndexError, TypeError):
-                return f"Unexpected Response Format: {str(data)[:200]}"
+            except (KeyError, IndexError, TypeError) as e:
+                log.error(f"Parsing error: {e}")
+                return f"Unexpected Format: {str(data)[:200]}"
 
         except Exception as e:
-            log.info(f"Attempt {attempt + 1} failed: {e}")
+            log.error(f"Attempt {attempt + 1} failed: {e}")
             if attempt < max_retries - 1:
                 time.sleep(10)
                 continue
