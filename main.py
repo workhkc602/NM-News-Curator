@@ -251,8 +251,7 @@ def send_email(content):
 
 # 5. Main Execution
 # ---------------------------------------------------------------------------
-# ---------------------------------------------------------------------------
-# ---------------------------------------------------------------------------
+
 def main():
     try:
         log.info("Starting NM-Omni Scraper...")
@@ -285,17 +284,20 @@ def main():
             "YL/20", "ND/20", "CE 16/20", "CE 8/20", "CE 9/20", "CE 14/20", "SS R50"
         ]
 
-        # Scrape Tenders
+        # Scrape Tenders (Direct Government/Entity Portals)
         for name, url in tender_targets:
             all_entries.extend(fetch_html_tenders(url, name))
 
-        # Scrape RSS (News)
+        # Scrape RSS (News) - Explicitly tag as news to avoid misclassification
         sources_path = os.path.join(os.path.dirname(__file__), 'sources.json')
         if os.path.exists(sources_path):
             with open(sources_path, 'r', encoding='utf-8') as f:
                 rss_sources = json.load(f)
                 for s in rss_sources:
-                    all_entries.extend(fetch_rss(s['url'], s['name'], s['category']))
+                    fetched_news = fetch_rss(s['url'], s['name'], s['category'])
+                    for item in fetched_news:
+                        item['source_type'] = 'news'  # Guardrail: Force news type
+                    all_entries.extend(fetched_news)
 
         # Recursive Flattener
         def flatten(items):
@@ -310,24 +312,24 @@ def main():
 
         # 3. SMARTER TRIAGE LOGIC
         for e in clean_list:
-            s_type = e.get('source_type', 'news')
             title = str(e.get('title', ''))
             body = str(e.get('body', e.get('summary', '')))
-            # Combined text for wider search coverage
             search_text = f"{title} {body}".lower()
             
             # Check for NM relevance
             is_nm_relevant = any(m.lower() in search_text for m in NM_MARKERS)
 
-            # We only keep items (Tender OR News) if they match your markers
             if is_nm_relevant:
                 filtered.append(e)
 
         if filtered:
-            # Sort: Tenders at the top
-            filtered.sort(key=lambda x: 0 if x.get('source_type') == 'tender' else 1)
+            # List of names from our tender_targets for sorting priority
+            govt_portals = [t[0] for t in tender_targets]
             
-            # Increased buffer to 35 items to ensure Llama sees a wide perspective
+            # Sort: Priority 0 for Govt/Entity Portals, Priority 1 for Media/RSS
+            filtered.sort(key=lambda x: 0 if x.get('source_name') in govt_portals else 1)
+            
+            # Increased buffer to 35 items
             final_selection = filtered[:35] 
             
             log.info(f"Filtered {len(filtered)} items. Sending {len(final_selection)} to AI.")
@@ -343,6 +345,3 @@ def main():
 
     except Exception as e:
         log.error(f"CRITICAL SCRIPT ERROR: {str(e)}", exc_info=True)
-
-if __name__ == "__main__":
-    main()
