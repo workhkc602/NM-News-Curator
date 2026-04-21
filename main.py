@@ -196,22 +196,24 @@ def summarize(entries):
     max_retries = 3
     for attempt in range(max_retries):
         try:
-            # FIX: The model name in the URL must be 'models/gemini-1.5-flash'
-            model_id = "models/gemini-1.5-flash"
-            url = f"https://generativelanguage.googleapis.com/v1beta/{model_id}:generateContent?key={LLM_API_KEY}"
+            # We use the v1beta path which is most compatible with 1.5 Flash
+            url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
             
-            log.info(f"AI Attempt {attempt + 1}. Calling Native Google API.")
+            log.info(f"AI Attempt {attempt + 1}. Endpoint: {url}")
             
             resp = httpx.post(
                 url,
-                headers={"Content-Type": "application/json"},
+                # Moving the API Key to the x-goog-api-key header for better stability
+                headers={
+                    "Content-Type": "application/json",
+                    "x-goog-api-key": LLM_API_KEY 
+                },
                 json={
                     "contents": [{
                         "parts": [{"text": prompt}]
                     }],
                     "generationConfig": {
                         "temperature": 0.1,
-                        "topP": 0.95,
                         "maxOutputTokens": 4096
                     }
                 }, 
@@ -220,19 +222,16 @@ def summarize(entries):
             
             if resp.status_code != 200:
                 log.error(f"Google Native API Error Status: {resp.status_code}")
-                # The log showed the 404 here because of the missing 'models/' prefix
+                log.error(f"Response Detail: {resp.text}")
                 if attempt < max_retries - 1:
                     time.sleep(15)
                     continue
                 return f"Summarization Error (HTTP {resp.status_code})"
 
             data = resp.json()
-
-            # 5. Native Response Parsing
             try:
                 return data['candidates'][0]['content']['parts'][0]['text'].strip()
-            except (KeyError, IndexError, TypeError) as e:
-                log.error(f"Parsing error: {e}")
+            except (KeyError, IndexError, TypeError):
                 return f"Unexpected Format: {str(data)[:200]}"
 
         except Exception as e:
