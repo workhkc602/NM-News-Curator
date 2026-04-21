@@ -137,7 +137,7 @@ def fetch_html_tenders(url, source_name):
 # 4. AI & Email Logic
 # ---------------------------------------------------------------------------
 def summarize(entries):
-    # 1. Flatten and Validate Input
+    # 1. Flatten and Validate Input (Exact same as your version)
     clean_entries = []
     for item in entries:
         if isinstance(item, list):
@@ -148,7 +148,7 @@ def summarize(entries):
     if not clean_entries:
         return "No valid data found to summarize."
 
-    # 2. Build the Articles Text
+    # 2. Build the Articles Text (Exact same as your version)
     articles_text = ""
     for i, e in enumerate(clean_entries):
         articles_text += f"ENTRY #{i+1}\n"
@@ -157,7 +157,7 @@ def summarize(entries):
         articles_text += f"TITLE: {e.get('title', 'No Title')}\n"
         articles_text += f"URL: {e.get('link', '')}\n\n"
 
-    # 3. The Prompt
+    # 3. The Prompt (All strategic sectors and rules preserved)
     prompt = f"""You are a senior Business Development Manager for a QS firm.
     To: Senior Partners / Board of Directors
     From: NM News Curator
@@ -192,48 +192,47 @@ def summarize(entries):
     Articles:
     {articles_text}"""
 
-   # 4. API Call with Hardcoded Stability
+    # 4. API Call with NATIVE Stability (The crucial change)
     max_retries = 3
     for attempt in range(max_retries):
         try:
-            # FORCE the absolute correct Google OpenAI-compatible path
-           # We are bypassing the ENV variable entirely because it's causing 404s
-            url = "https://generativelanguage.googleapis.com/v1beta/openai/v1/chat/completions"
+            # We switch to the NATIVE endpoint to kill the v1main error forever
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={LLM_API_KEY}"
             
-            log.info(f"AI Attempt {attempt + 1}. Hardcoded URL: {url}")
+            log.info(f"AI Attempt {attempt + 1}. Using Native Google Endpoint.")
             
             resp = httpx.post(
                 url,
-                headers={
-                    "Authorization": f"Bearer {LLM_API_KEY}", 
-                    "Content-Type": "application/json"
-                },
+                headers={"Content-Type": "application/json"},
                 json={
-                    "model": "gemini-1.5-flash",  # Hardcoded for stability
-                    "messages": [{"role": "user", "content": prompt}], 
-                    "temperature": 0.1
+                    "contents": [{
+                        "parts": [{"text": prompt}]
+                    }],
+                    "generationConfig": {
+                        "temperature": 0.1,
+                        "maxOutputTokens": 4096
+                    }
                 }, 
                 timeout=300
             )
             
-            data = resp.json()
-
-            # Handle errors from API
-            if isinstance(data, dict) and "error" in data:
-                msg = data.get("error", {}).get("message", "Unknown API error")
-                log.error(f"Google API Error: {msg}")
+            if resp.status_code != 200:
+                log.error(f"Google API Error {resp.status_code}: {resp.text}")
                 if attempt < max_retries - 1:
                     time.sleep(15)
                     continue
-                return f"Summarization Error: {msg}"
+                return f"Summarization Error: {resp.status_code}"
 
-            if isinstance(data, dict) and "choices" in data:
-                return data["choices"][0]["message"]["content"].strip()
-            
-            return f"Unexpected Response: {str(data)[:200]}"
+            data = resp.json()
+
+            # 5. Native Response Parsing (Required because 'choices' doesn't exist in Native)
+            try:
+                return data['candidates'][0]['content']['parts'][0]['text'].strip()
+            except (KeyError, IndexError, TypeError):
+                return f"Unexpected Response Format: {str(data)[:200]}"
 
         except Exception as e:
-            log.error(f"Attempt {attempt + 1} failed: {e}")
+            log.info(f"Attempt {attempt + 1} failed: {e}")
             if attempt < max_retries - 1:
                 time.sleep(10)
                 continue
