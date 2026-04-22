@@ -389,7 +389,7 @@ def main():
                 # Define your anchors
                 primary_anchors = ["SCMP - Hong Kong News", "HK01 - Community News"]
                 
-               for s in rss_sources:
+                for s in rss_sources:
                     # 1. THE LOGIC SWITCH (Updated to include The Standard)
                     if any(site in s['name'] for site in ["Wen Wei Po", "Ta Kung Pao", "The Standard"]):
                         log.info(f"Using Manual Scraper for: {s['name']}")
