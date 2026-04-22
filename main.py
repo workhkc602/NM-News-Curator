@@ -90,7 +90,10 @@ def is_expired(text):
 # 3. Scraping Functions
 # ---------------------------------------------------------------------------
 def fetch_rss(url, source_name, source_type, timeout=20.0):
-    headers = {"User-Agent": "Mozilla/5.0"}
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/rss+xml, application/xml;q=0.9, */*;q=0.8"
+    }
     entries = []
     now = datetime.now(timezone.utc)
     threshold = now - timedelta(hours=HOURS_LOOKBACK)
