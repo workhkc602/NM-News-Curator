@@ -150,6 +150,9 @@ def fetch_web_headlines(url, source_name, source_type):
                         elif "thestandard" in url:
                             # lstrip prevents double slashes if the link already starts with one
                             href = f"https://www.thestandard.com.hk/{href.lstrip('/')}"
+                        elif "am730" in url:
+                            # am730 links usually start with /news/ or /column/
+                            href = f"https://www.am730.com.hk{href}"
                     
                     entries.append({
                         "title": title,
@@ -409,7 +412,7 @@ def main():
                 
                 for s in rss_sources:
                     # 1. THE LOGIC SWITCH (Updated to include The Standard)
-                    if any(site in s['name'] for site in ["Wen Wei Po", "Ta Kung Pao", "The Standard"]):
+                    if any(site in s['name'] for site in ["Wen Wei Po", "Ta Kung Pao", "The Standard", "am730"]):
                         log.info(f"Using Manual Scraper for: {s['name']}")
                         fetched_news = fetch_web_headlines(s['url'], s['name'], s['category'])
                     else:
