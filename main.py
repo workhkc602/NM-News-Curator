@@ -448,3 +448,6 @@ def main():
 
     except Exception as e:
         log.error(f"CRITICAL SCRIPT ERROR: {str(e)}", exc_info=True)
+
+if __name__ == "__main__":
+    main()
