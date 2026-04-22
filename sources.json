@@ -43,12 +43,12 @@
     "name": "GovHK (Infra)",
     "url": "https://www.news.gov.hk/en/categories/infrastructure/html/articlelist.rss.xml",
     "category": "gov-hk-infra"
-  }
+  },
     {
     "name": "GovHK (Finance)",
     "url": "https://www.news.gov.hk/en/categories/business/html/articlelist.rss.xml",
     "category": "gov-hk-finance"
-  }
+  },
   {
     "name": "LegCo HKSAR (YouTube)",
     "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC29NAwW0H0kvi239sD7kT7w",
