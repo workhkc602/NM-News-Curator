@@ -37,11 +37,12 @@ BIZ_MARKERS = [
 ]
 
 NM_MARKERS = [
-    "Northern Metropolis", "北部都會區", "Four Zones", "NM Highway", "Metropolis Highway",
+    "Northern Metropolis", "北部都會區", "北都", "Four Zones", "NM Highway", "Metropolis Highway",
     "San Tin Technopole", "新田科技城", "Innovation and Technology Zone", "I&T Zone",
     "High-end Professional Services", "Logistics Hub", "Boundary Commerce",
     "Blue and Green Recreation", "University Town", "大學城", "UniTown",
-    "Kwu Tung", "古洞", "Fanling North", "粉嶺北", "Hung Shui Kiu", "洪水橋", "HSK",
+    "Kwu Tung", "古洞", "Fanling North", "粉嶺北", "Fanling Bypass", "粉嶺繞道", 
+    "Northern Link", "北環綫", "Hung Shui Kiu", "洪水橋", "HSK",
     "Ha Tsuen", "廈村", "Yuen Long South", "元朗南", "Lok Ma Chau", "落馬洲", "Hetao", "河套",
     "HSITP", "Ngau Tam Mei", "牛潭尾", "Ma Tso Lung", "馬草壟", "Sandy Ridge", "沙嶺",
     "Lau Fau Shan", "流浮山", "New Territories North", "新界北",
@@ -388,24 +389,23 @@ def main():
                 # Define your anchors
                 primary_anchors = ["SCMP - Hong Kong News", "HK01 - Community News"]
                 
-                for s in rss_sources:
-                    # Logic Switch: Use BeautifulSoup for broken RSS, use fetch_rss for others
-                    if "Wen Wei Po" in s['name'] or "Ta Kung Pao" in s['name']:
+               for s in rss_sources:
+                    # 1. THE LOGIC SWITCH (Updated to include The Standard)
+                    if any(site in s['name'] for site in ["Wen Wei Po", "Ta Kung Pao", "The Standard"]):
                         log.info(f"Using Manual Scraper for: {s['name']}")
                         fetched_news = fetch_web_headlines(s['url'], s['name'], s['category'])
                     else:
-                        # Anchor check for timeout
                         current_timeout = 30.0 if s['name'] in primary_anchors else 15.0
                         if s['name'] in primary_anchors:
                             log.info(f"Checking primary anchor: {s['name']} (Extended Timeout)")
                         
                         fetched_news = fetch_rss(s['url'], s['name'], s['category'], timeout=current_timeout)
                     
-                    # Label and store
+                    # 2. LABEL AND STORE (Keep this part!)
                     for item in fetched_news:
                         item['source_type'] = 'news'
-                        all_entries.append(item) 
-
+                        all_entries.append(item)
+                        
         # 3. Processing
         def flatten(items):
             flat = []
