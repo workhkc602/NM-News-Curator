@@ -341,27 +341,28 @@ def main():
 
         # Scrape RSS (News)
         sources_path = os.path.join(os.path.dirname(__file__), 'sources.json')
-if os.path.exists(sources_path):
+# 2. Start RSS News Scrape
+        sources_path = os.path.join(os.path.dirname(__file__), 'sources.json')
+        
+        if os.path.exists(sources_path):
             with open(sources_path, 'r', encoding='utf-8') as f:
                 rss_sources = json.load(f)
                 
-                # Define your reliable "Anchor" sources
+                # Define your anchors
                 primary_anchors = ["SCMP", "HK01"]
                 
                 for s in rss_sources:
-                    # Check if this source is a primary anchor
+                    # Check if this source is an anchor
                     if s['name'] in primary_anchors:
                         log.info(f"Checking primary anchor: {s['name']} (Extended Timeout)")
-                        # Call fetch_rss with a longer timeout (e.g., 30 seconds)
-                        fetched_news = fetch_rss(s['url'], s['name'], s['category'], timeout=30)
+                        fetched_news = fetch_rss(s['url'], s['name'], s['category'], timeout=30.0)
                     else:
-                        # Standard 10-second timeout for regular sources
-                        fetched_news = fetch_rss(s['url'], s['name'], s['category'], timeout=10)
+                        fetched_news = fetch_rss(s['url'], s['name'], s['category'], timeout=15.0)
                     
+                    # Label them as news and add to list
                     for item in fetched_news:
-                        item['source_type'] = 'news'  
-                        all_entries.extend(fetched_news)
-
+                        item['source_type'] = 'news'
+                        all_entries.extend([item]) # Ensuring it stays a flat list
         def flatten(items):
             flat = []
             for i in items:
