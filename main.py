@@ -338,13 +338,11 @@ def main():
             ("HKUST Tenders", "https://puro.hkust.edu.hk/etendering")
         ]
 
-        # Scrape Tenders
+        # 1. Scrape Tenders
         for name, url in tender_targets:
             all_entries.extend(fetch_html_tenders(url, name))
 
-        # Scrape RSS (News)
-        sources_path = os.path.join(os.path.dirname(__file__), 'sources.json')
-# 2. Start RSS News Scrape
+        # 2. Start News Scrape
         sources_path = os.path.join(os.path.dirname(__file__), 'sources.json')
         
         if os.path.exists(sources_path):
@@ -355,17 +353,24 @@ def main():
                 primary_anchors = ["SCMP - Hong Kong News", "HK01 - Community News"]
                 
                 for s in rss_sources:
-                    # Check if this source is an anchor
-                    if s['name'] in primary_anchors:
-                        log.info(f"Checking primary anchor: {s['name']} (Extended Timeout)")
-                        fetched_news = fetch_rss(s['url'], s['name'], s['category'], timeout=30.0)
+                    # Logic Switch: Use BeautifulSoup for broken RSS, use fetch_rss for others
+                    if "Wen Wei Po" in s['name'] or "Ta Kung Pao" in s['name']:
+                        log.info(f"Using Manual Scraper for: {s['name']}")
+                        fetched_news = fetch_web_headlines(s['url'], s['name'], s['category'])
                     else:
-                        fetched_news = fetch_rss(s['url'], s['name'], s['category'], timeout=15.0)
+                        # Anchor check for timeout
+                        current_timeout = 30.0 if s['name'] in primary_anchors else 15.0
+                        if s['name'] in primary_anchors:
+                            log.info(f"Checking primary anchor: {s['name']} (Extended Timeout)")
+                        
+                        fetched_news = fetch_rss(s['url'], s['name'], s['category'], timeout=current_timeout)
                     
-                    # Label them as news and add to list
+                    # Label and store
                     for item in fetched_news:
                         item['source_type'] = 'news'
-                        all_entries.extend([item]) # Ensuring it stays a flat list
+                        all_entries.append(item) 
+
+        # 3. Processing
         def flatten(items):
             flat = []
             for i in items:
@@ -388,6 +393,7 @@ def main():
 
         log.info(f"Entries matching NM markers: {len(filtered)}")
 
+        # 4. Sorting and Emailing
         if filtered:
             govt_portals = [t[0] for t in tender_targets]
             filtered.sort(key=lambda x: 0 if x.get('source_name') in govt_portals else 1)
@@ -406,6 +412,3 @@ def main():
 
     except Exception as e:
         log.error(f"CRITICAL SCRIPT ERROR: {str(e)}", exc_info=True)
-
-if __name__ == "__main__":
-    main()
