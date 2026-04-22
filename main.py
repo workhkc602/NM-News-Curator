@@ -118,7 +118,43 @@ def fetch_rss(url, source_name, source_type, timeout=20.0):
     except Exception as ex:
         log.error(f"Error fetching {source_name}: {ex}")
         return []
-
+def fetch_web_headlines(url, source_name, source_type):
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+    }
+    entries = []
+    try:
+        # Use verify=False if you still encounter SSL issues with these sites
+        with httpx.Client(headers=headers, follow_redirects=True, timeout=20.0, verify=False) as client:
+            response = client.get(url)
+            soup = BeautifulSoup(response.content, 'lxml')
+            
+            # This logic targets common HK news patterns (links with titles)
+            # We look for <a> tags inside <h3> or <h4> or specific news-list classes
+            for link in soup.select('a[href*="/news/"], a[href*="/article/"]'):
+                title = link.get_text(strip=True)
+                href = link.get('href')
+                
+                # Filter out short fragments or empty titles
+                if len(title) > 10 and href:
+                    if not href.startswith('http'):
+                        href = f"https://www.wenweipo.com{href}" if "wenwei" in url else f"http://www.takungpao.com.hk{href}"
+                    
+                    entries.append({
+                        "title": title,
+                        "body": "", # Web scraping doesn't give us the body easily without clicking
+                        "link": href,
+                        "source_type": source_type,
+                        "source_name": source_name
+                    })
+        
+        # Keep only the top 15 to avoid overwhelming the AI
+        return entries[:15]
+        
+    except Exception as ex:
+        log.error(f"Manual Scrape Error for {source_name}: {ex}")
+        return []
+        
 def fetch_html_tenders(url, source_name):
     headers = {"User-Agent": "Mozilla/5.0"}
     entries = []
