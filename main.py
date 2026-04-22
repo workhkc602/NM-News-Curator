@@ -341,7 +341,7 @@ def main():
 
         # Scrape RSS (News)
         sources_path = os.path.join(os.path.dirname(__file__), 'sources.json')
-       if os.path.exists(sources_path):
+if os.path.exists(sources_path):
             with open(sources_path, 'r', encoding='utf-8') as f:
                 rss_sources = json.load(f)
                 
