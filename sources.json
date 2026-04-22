@@ -25,9 +25,9 @@
     "category": "media-zh"
   },
   {
-    "name": "am730 - News Feed",
-    "url": "https://www.am730.com.hk/feed/news",
-    "category": "media-zh"
+    "name": "am730 - Local News",
+    "url": "https://www.am730.com.hk/category/%E6%9C%AC%E5%9C%B0/11",
+    "category": "news"
   },
    {
     "name": "Wen Wei Po - Local News",
