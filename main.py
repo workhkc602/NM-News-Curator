@@ -270,7 +270,8 @@ def summarize(entries):
     RULES:
     - Analyze every entry through a QS lens (cost estimation, procurement, contract management, or tenancy valuation).
     - FORMATTING: Each bullet point MUST follow this structure:
-      * *QS Lead:* [Detailed QS-specific insight]
+      * *Title:* [Exact title or headline from the source]
+        *QS Lead:* [Detailed QS-specific insight]
         *Sector:* [Chosen Strategic Sector]
         [Detailed explanation of the technical components, e.g., MEP, cleanroom, or A&A value.]
         [View Source Detail >](URL)
