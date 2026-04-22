@@ -89,13 +89,13 @@ def is_expired(text):
 # ---------------------------------------------------------------------------
 # 3. Scraping Functions
 # ---------------------------------------------------------------------------
-def fetch_rss(url, source_name, source_type):
+def fetch_rss(url, source_name, source_type, timeout=20.0):
     headers = {"User-Agent": "Mozilla/5.0"}
     entries = []
     now = datetime.now(timezone.utc)
     threshold = now - timedelta(hours=HOURS_LOOKBACK)
     try:
-        with httpx.Client(headers=headers, follow_redirects=True, timeout=20.0) as client:
+        with httpx.Client(headers=headers, follow_redirects=True, timeout=timeout) as client:
             response = client.get(url)
             feed = feedparser.parse(response.content)
             for e in feed.entries:
@@ -318,7 +318,7 @@ def main():
             ("NM Portal", "https://www.nm.gov.hk/en/tender-contracts"),
             ("CEDD NM Projects", "https://www.cedd.gov.hk/eng/our-projects/northern-metropolis/index.html"),
             ("HKHA Business", "https://www.housingauthority.gov.hk/en/business-partnerships/tenders/index.html"),
-            ("ArchSD Forecast", "https://www.archsd.gov.hk/en/tenders-notices/consultancies/forecast-of-consultancies.html"),
+            ("ArchSD Forecast", "https://www.archsd.gov.hk/en/newforecastconsultancies.html"),
             ("ArchSD EOI", "https://www.archsd.gov.hk/en/tenders-notices/consultancies/notices-of-invitation-for-expression-of-interest.html"),
             ("ArchSD Tech Proposals", "https://www.archsd.gov.hk/en/tenders-notices/consultancies/notices-of-invitation-for-technical-and-fee-proposal.html"),
             ("MTRC New Projects", "https://www.mtr.com.hk/en/corporate/tenders/new_projects.html"),
@@ -341,14 +341,26 @@ def main():
 
         # Scrape RSS (News)
         sources_path = os.path.join(os.path.dirname(__file__), 'sources.json')
-        if os.path.exists(sources_path):
+       if os.path.exists(sources_path):
             with open(sources_path, 'r', encoding='utf-8') as f:
                 rss_sources = json.load(f)
+                
+                # Define your reliable "Anchor" sources
+                primary_anchors = ["SCMP", "HK01"]
+                
                 for s in rss_sources:
-                    fetched_news = fetch_rss(s['url'], s['name'], s['category'])
+                    # Check if this source is a primary anchor
+                    if s['name'] in primary_anchors:
+                        log.info(f"Checking primary anchor: {s['name']} (Extended Timeout)")
+                        # Call fetch_rss with a longer timeout (e.g., 30 seconds)
+                        fetched_news = fetch_rss(s['url'], s['name'], s['category'], timeout=30)
+                    else:
+                        # Standard 10-second timeout for regular sources
+                        fetched_news = fetch_rss(s['url'], s['name'], s['category'], timeout=10)
+                    
                     for item in fetched_news:
                         item['source_type'] = 'news'  
-                    all_entries.extend(fetched_news)
+                        all_entries.extend(fetched_news)
 
         def flatten(items):
             flat = []
