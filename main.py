@@ -30,24 +30,34 @@ def get_env(name: str, default: str = None):
 
 # Global Keywords - Moved here so all functions can see them
 BIZ_MARKERS = [
-    "Tender", "招標", "Contract", "合約", "Consultancy", "顧問", 
+    "Tender", "招標", "招标", "Contract", "合約", "合约", "Consultancy", "顧問", "顾问",
     "EOI", "Forecast", "Expression of Interest", "Technical and Fee Proposal", 
-    "Land Sale", "賣地", "片區開發", "Fitting-out", "Fit-out", "Renovation", 
-    "翻新", "Tenancy", "租賃", "License", "牌照", "Design and Build", "D&B", 
-    "Alteration", "Addition", "A&A", "Maintenance", "Repair"
+    "Land Sale", "賣地", "卖地", "片區開發", "片区开发", "Fitting-out", "Fit-out", "Renovation", 
+    "翻新", "Tenancy", "租賃", "租赁", "License", "牌照", "Design and Build", "D&B", 
+    "Alteration", "Addition", "A&A", "Maintenance", "Repair",
+    "Large-scale land disposal", "大口徑土地供應", "大口径土地供应",
+    "Strategic Enterprise", "重點企業", "重点企业", "Funding approval", "撥款", "拨款", "財委會", "财委会",
+    "Pilot area", "試點", "试点", "先行先試", "先行先试", "Anchor enterprises", "龍頭企業", "龙头企业",
+    "Public-private partnership", "PPP", "公私營合作", "公私营合作"
 ]
 
 NM_MARKERS = [
-    "Northern Metropolis", "北部都會區", "北都", "Four Zones", "NM Highway", "Metropolis Highway",
+    "Northern Metropolis", "北部都會區", "北部都会区", "北都", "Four Zones", "NM Highway", "Metropolis Highway",
     "San Tin Technopole", "新田科技城", "Innovation and Technology Zone", "I&T Zone",
     "High-end Professional Services", "Logistics Hub", "Boundary Commerce",
-    "Blue and Green Recreation", "University Town", "大學城", "UniTown",
-    "Kwu Tung", "古洞", "Fanling North", "粉嶺北", "Fanling Bypass", "粉嶺繞道", 
-    "Northern Link", "北環綫", "Hung Shui Kiu", "洪水橋", "HSK",
-    "Ha Tsuen", "廈村", "Yuen Long South", "元朗南", "Lok Ma Chau", "落馬洲", "Hetao", "河套",
-    "HSITP", "Ngau Tam Mei", "牛潭尾", "Ma Tso Lung", "馬草壟", "Sandy Ridge", "沙嶺",
+    "Blue and Green Recreation", "University Town", "大學城", "大学城", "UniTown",
+    "Kwu Tung", "古洞", "Fanling North", "粉嶺北", "粉岭北", "Fanling Bypass", "粉嶺繞道", "粉岭绕道",
+    "Northern Link", "北環綫", "北环线", "Hung Shui Kiu", "洪水橋", "洪水桥", "HSK",
+    "Ha Tsuen", "廈村", "厦村", "Yuen Long South", "元朗南", "Lok Ma Chau", "落馬洲", "落马洲", "Hetao", "河套",
+    "HSITP", "Ngau Tam Mei", "牛潭尾", "Ma Tso Lung", "馬草壟", "马草垄", "Sandy Ridge", "沙嶺", "沙岭",
     "Lau Fau Shan", "流浮山", "New Territories North", "新界北",
-    "Northern Link", "北環綫", "NOL", "Central Rail Link", "中鐵綫", "Western Railway",
+    "NOL", "Central Rail Link", "中鐵綫", "中铁线", "Western Railway",
+    "NMUT", "北都大學城", "北都大学城", "Working Group on University Town",
+    "Hong Kong-Shenzhen I&T Park", "港深創科園", "港深创科园", "Loop",
+    "Dedicated legislation", "專屬法例", "专属法例", "北都條例", "北都条例",
+    "Industry-driven", "產業帶動", "产业带动", "產業導向", "产业导向", "Hetao Hong Kong Park", "河套香港園區", "河套香港园区",
+    "Sejong", "世宗市", "Korea visit", "15th Five-Year Plan", "十五五",
+    "I&T ecosystem", "創科生態圈", "创科生态圈",
     "YL/20", "ND/20", "CE 16/20", "CE 8/20", "CE 9/20", "CE 14/20", "SS R50"
 ]
 
