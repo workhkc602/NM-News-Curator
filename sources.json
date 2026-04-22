@@ -11,7 +11,7 @@
   },
   {
     "name": "Ming Pao - Local News",
-    "url": "https://news.mingpao.com/php/rss.php",
+    "url": "https://news.mingpao.com/rss/ins/all.xml",
     "category": "media-zh"
   },
   {
@@ -39,6 +39,16 @@
     "url": "https://www.am730.com.hk/rss/news",
     "category": "media-zh"
   },
+  {
+    "name": "GovHK (Infra)",
+    "url": "https://www.news.gov.hk/en/categories/infrastructure/html/articlelist.rss.xml",
+    "category": "gov-hk-infra"
+  }
+    {
+    "name": "GovHK (Finance)",
+    "url": "https://www.news.gov.hk/en/categories/business/html/articlelist.rss.xml",
+    "category": "gov-hk-finance"
+  }
   {
     "name": "LegCo HKSAR (YouTube)",
     "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC29NAwW0H0kvi239sD7kT7w",
