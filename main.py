@@ -139,7 +139,13 @@ def fetch_web_headlines(url, source_name, source_type):
                 # Filter out short fragments or empty titles
                 if len(title) > 10 and href:
                     if not href.startswith('http'):
-                        href = f"https://www.wenweipo.com{href}" if "wenwei" in url else f"http://www.takungpao.com.hk{href}"
+                        if "wenweipo" in url:
+                            href = f"https://www.wenweipo.com{href}"
+                        elif "takungpao" in url:
+                            href = f"http://www.takungpao.com.hk{href}"
+                        elif "thestandard" in url:
+                            # lstrip prevents double slashes if the link already starts with one
+                            href = f"https://www.thestandard.com.hk/{href.lstrip('/')}"
                     
                     entries.append({
                         "title": title,
