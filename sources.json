@@ -1,7 +1,7 @@
 [
   {
     "name": "SCMP - Hong Kong News",
-    "url": "https://www.scmp.com/rss/2/feed",
+    "url": "https://www.scmp.com/rss/2/feed/",
     "category": "media-en"
   },
   {
@@ -25,16 +25,6 @@
     "category": "media-zh"
   },
   {
-    "name": "Ta Kung Pao - Hong Kong",
-    "url": "http://www.takungpao.com.hk/rss/hongkong.xml",
-    "category": "media-zh"
-  },
-  {
-    "name": "Wen Wei Po - HK News",
-    "url": "https://www.wenweipo.com/rss/hongkong.xml",
-    "category": "media-zh"
-  },
-  {
     "name": "am730 - News Feed",
     "url": "https://www.am730.com.hk/rss/news",
     "category": "media-zh"
@@ -46,7 +36,7 @@
   },
     {
     "name": "GovHK (Finance)",
-    "url": "https://www.news.gov.hk/en/categories/business/html/articlelist.rss.xml",
+    "url": "https://www.news.gov.hk/en/categories/finance/html/articlelist.rss.xml",
     "category": "gov-hk-finance"
   },
   {
