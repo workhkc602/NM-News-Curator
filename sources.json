@@ -5,8 +5,8 @@
     "category": "media-en"
   },
   {
-    "name": "The Standard - Latest",
-    "url": "https://www.thestandard.com.hk/newsfeed/latest/news.xml",
+    "name": "The Standard - HK News",
+    "url": "https://www.thestandard.com.hk/sections/hong-kong",
     "category": "media-en"
   },
   {
@@ -20,8 +20,8 @@
     "category": "media-zh"
   },
   {
-    "name": "HK01 - Community News",
-    "url": "https://www.hk01.com/tag/24014/rss",
+    "name": "HK01 - Northern Metropolis",
+    "url": "https://www.hk01.com/tag/50714/rss",
     "category": "media-zh"
   },
   {
@@ -48,6 +48,11 @@
     "name": "GovHK (Finance)",
     "url": "https://www.news.gov.hk/en/categories/finance/html/articlelist.rss.xml",
     "category": "gov-hk-finance"
+  },
+  {
+    "name": "GovHK - Press Releases",
+    "url": "https://www.info.gov.hk/gia/general/today.htm",
+    "category": "gov-hk-news"
   },
   {
     "name": "LegCo HKSAR (YouTube)",
