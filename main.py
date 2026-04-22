@@ -116,21 +116,42 @@ def fetch_html_tenders(url, source_name):
     headers = {"User-Agent": "Mozilla/5.0"}
     entries = []
     try:
-        with httpx.Client(headers=headers, follow_redirects=True, timeout=30.0) as client:
+        # Use a shorter timeout for individual sites so one slow site doesn't hang the whole bot
+        with httpx.Client(headers=headers, follow_redirects=True, timeout=20.0) as client:
             response = client.get(url)
+            
+            # This is the key: it triggers the 'except' block if the site returns 404, 500, etc.
+            response.raise_for_status() 
+            
             soup = BeautifulSoup(response.text, 'lxml')
             for tag in soup.find_all('a', href=True):
                 text = tag.get_text().strip()
                 href = tag['href']
-                # Now correctly accesses global BIZ_MARKERS and NM_MARKERS
+                
+                # Filter logic remains untouched to maintain your current accuracy
                 if any(k.lower() in text.lower() for k in BIZ_MARKERS) and len(text) > 10:
                     if any(m.lower() in text.lower() for m in NM_MARKERS):
-                        if is_expired(text): continue
+                        if is_expired(text): 
+                            continue
                         full_url = urljoin(url, href)
-                        entries.append({"title": text, "link": full_url, "source_type": "tender", "source_name": source_name})
+                        entries.append({
+                            "title": text, 
+                            "link": full_url, 
+                            "source_type": "tender", 
+                            "source_name": source_name
+                        })
         return entries
+
+    except httpx.HTTPStatusError as e:
+        # Specifically catches 404/500 errors and logs which site failed
+        log.warning(f"⚠️ Site unavailable ({e.response.status_code}) for {source_name}. Skipping...")
+        return []
+    except httpx.ConnectTimeout:
+        log.warning(f"⏱️ Connection timed out for {source_name}. Skipping...")
+        return []
     except Exception as ex:
-        log.error(f"HTML Scrape Error for {source_name}: {ex}")
+        # Catches any other random errors (parsing, etc.)
+        log.error(f"❌ Unexpected Scrape Error for {source_name}: {ex}")
         return []
 
 # ---------------------------------------------------------------------------
@@ -262,15 +283,25 @@ def main():
         all_entries = []
         
         tender_targets = [
+            # --- PUBLIC SECTOR ---
             ("NM Portal", "https://www.nm.gov.hk/en/tender-contracts"),
-            ("HKHA Commercial", "https://www.housingauthority.gov.hk/en/commercial-properties/tender-notices-and-awards/index.html"),
+            ("CEDD NM Projects", "https://www.cedd.gov.hk/eng/our-projects/northern-metropolis/index.html"),
             ("HKHA Business", "https://www.housingauthority.gov.hk/en/business-partnerships/tenders/index.html"),
             ("ArchSD Forecast", "https://www.archsd.gov.hk/en/tenders-notices/consultancies/forecast-of-consultancies.html"),
-            ("MTRC", "https://www.mtr.com.hk/en/corporate/tenders/new_projects.html"),
+            ("ArchSD EOI", "https://www.archsd.gov.hk/en/tenders-notices/consultancies/notices-of-invitation-for-expression-of-interest.html"),
+            ("ArchSD Tech Proposals", "https://www.archsd.gov.hk/en/tenders-notices/consultancies/notices-of-invitation-for-technical-and-fee-proposal.html"),
+            ("MTRC New Projects", "https://www.mtr.com.hk/en/corporate/tenders/new_projects.html"),
+            ("MTRC Operating", "https://www.mtr.com.hk/en/corporate/tenders/or.html"),
+            ("MTRC Property", "https://www.mtr.com.hk/en/corporate/tenders/property_services.html"),
+
+            # --- INSTITUTIONS ---
             ("HSITP Loop", "https://www.hsitp.org/en/tender-notices"),
-            ("HKBU", "https://fohome.hkbu.edu.hk/for-suppliers/information/tender-notice.html"),
-            ("HSUHK", "https://fo.hsu.edu.hk/supplier/tender-notice/"),
-            ("EdUHK Projects", "https://www.eduhk.hk/eo/our-projects")
+            ("EdUHK Tenders", "https://www.eduhk.hk/tender_notice/"),
+            ("HSUHK Tenders", "https://fo.hsu.edu.hk/supplier/tender-notice/"),
+            ("HKBU Tenders", "https://fohome.hkbu.edu.hk/for-suppliers/information/tender-notice.html"),
+            ("PolyU Tenders", "https://tendering.polyu.edu.hk/Guest/en/index.htm"),
+            ("CityU Tenders", "https://etender.cityu.edu.hk/Guest/en/GeneralInfo.aspx"),
+            ("HKUST Tenders", "https://puro.hkust.edu.hk/etendering")
         ]
 
         # Scrape Tenders
