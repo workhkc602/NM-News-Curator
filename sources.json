@@ -29,6 +29,16 @@
     "url": "https://www.am730.com.hk/rss/news",
     "category": "media-zh"
   },
+   {
+    "name": "Wen Wei Po - Local News",
+    "url": "https://www.wenweipo.com/",
+    "category": "media-zh"
+  },
+  {
+    "name": "Ta Kung Pao - Local News",
+    "url": "http://www.takungpao.com.hk/",
+    "category": "media-zh"
+  },
   {
     "name": "GovHK (Infra)",
     "url": "https://www.news.gov.hk/en/categories/infrastructure/html/articlelist.rss.xml",
