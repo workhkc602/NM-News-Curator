@@ -352,7 +352,7 @@ def main():
                 rss_sources = json.load(f)
                 
                 # Define your anchors
-                primary_anchors = ["SCMP", "HK01"]
+                primary_anchors = ["SCMP - Hong Kong News", "HK01 - Community News"]
                 
                 for s in rss_sources:
                     # Check if this source is an anchor
