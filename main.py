@@ -4,7 +4,8 @@ import httpx
 import feedparser
 import re
 import json  
-import time  
+import time
+import ssl
 import markdown2  # Make sure to run 'pip install markdown2'
 import smtplib
 from email.mime.text import MIMEText
@@ -95,7 +96,8 @@ def fetch_rss(url, source_name, source_type, timeout=20.0):
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.5",
-        "Referer": "https://www.google.com/"
+        "Referer": "https://www.google.com/",
+        "DNT": "1" # "Do Not Track" - sometimes helps bypass bot checks
     }
     entries = []
     now = datetime.now(timezone.utc)
@@ -165,14 +167,24 @@ def fetch_web_headlines(url, source_name, source_type):
         return []
         
 def fetch_html_tenders(url, source_name):
-    headers = {"User-Agent": "Mozilla/5.0"}
+    # --- 1. SET UP LEGACY SSL BYPASS ---
+    ctx = ssl.create_default_context()
+    # This flag (0x4) allows connection to older university servers (EdUHK fix)
+    ctx.options |= 0x4  
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE 
+
+    # --- 2. UPDATED HEADERS ---
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+        "Referer": "https://www.google.com/"
+    }
+    
     entries = []
     try:
-        # Use a shorter timeout for individual sites so one slow site doesn't hang the whole bot
-        with httpx.Client(headers=headers, follow_redirects=True, timeout=20.0) as client:
+        # --- 3. USE verify=ctx AND SLIGHTLY LONGER TIMEOUT ---
+        with httpx.Client(headers=headers, follow_redirects=True, timeout=25.0, verify=ctx) as client:
             response = client.get(url)
-            
-            # This is the key: it triggers the 'except' block if the site returns 404, 500, etc.
             response.raise_for_status() 
             
             soup = BeautifulSoup(response.text, 'lxml')
@@ -180,7 +192,7 @@ def fetch_html_tenders(url, source_name):
                 text = tag.get_text().strip()
                 href = tag['href']
                 
-                # Filter logic remains untouched to maintain your current accuracy
+                # Keep your original filtering logic exactly as it was
                 if any(k.lower() in text.lower() for k in BIZ_MARKERS) and len(text) > 10:
                     if any(m.lower() in text.lower() for m in NM_MARKERS):
                         if is_expired(text): 
@@ -195,14 +207,12 @@ def fetch_html_tenders(url, source_name):
         return entries
 
     except httpx.HTTPStatusError as e:
-        # Specifically catches 404/500 errors and logs which site failed
         log.warning(f"⚠️ Site unavailable ({e.response.status_code}) for {source_name}. Skipping...")
         return []
     except httpx.ConnectTimeout:
         log.warning(f"⏱️ Connection timed out for {source_name}. Skipping...")
         return []
     except Exception as ex:
-        # Catches any other random errors (parsing, etc.)
         log.error(f"❌ Unexpected Scrape Error for {source_name}: {ex}")
         return []
 
