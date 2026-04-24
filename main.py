@@ -306,6 +306,17 @@ def summarize(entries):
     3. NO BULLET POINTS FOR EACH LINE of an entry: Use only one bullet point next to the title of each full entry.
     4. SPACING: Add one empty line between each full entry.
 
+    STRICT TERMINOLOGY & CONTEXT RULES:
+    1. CONTEXTUAL TRANSLATION: "The Loop" MUST be translated as "落馬洲河套地區" (Lok Ma Chau Loop). 
+       - NEVER use literal translations like "循環線" or "回路".
+       - If the project refers to the tech park within it, use "港深創新及科技園" (HSITP).
+    2. NORTHERN METROPOLIS: Always translate as "北部都會區".
+    3. SAN TIN TECHNOPOLE: Always translate as "新田科技城".
+    4. QS DICTIONARY: Use formal industry terms:
+       - "Pre-contract cost planning" -> "招標前成本規劃"
+       - "Procurement strategy" -> "採購策略"
+       - "Tenancy valuation" -> "租務估值"
+
     Articles:
     {articles_text}"""
 
