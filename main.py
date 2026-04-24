@@ -325,7 +325,7 @@ def summarize(entries):
                     "model": LLM_MODEL,
                     "messages": [{"role": "system", "content": "You are a helpful assistant."},
                                  {"role": "user", "content": prompt}],
-                    "temperature": 0.1
+                    "temperature": 0.2
                 }, 
                 timeout=300
             )
