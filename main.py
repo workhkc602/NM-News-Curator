@@ -137,7 +137,8 @@ def fetch_rss(url, source_name, source_type, timeout=20.0):
         return []
 def fetch_web_headlines(url, source_name, source_type):
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36", # <--- ADD THIS COMMA
+        "Referer": "https://www.google.com/"
     }
     entries = []
     try:
@@ -150,26 +151,17 @@ def fetch_web_headlines(url, source_name, source_type):
             # We look for <a> tags inside <h3> or <h4> or specific news-list classes
             for link in soup.select('a[href*="/news/"], a[href*="/article/"]'):
                 title = link.get_text(strip=True)
-                href = link.get('href')
+                raw_href = link.get('href')
                 
                 # Filter out short fragments or empty titles
-                if len(title) > 10 and href:
-                    if not href.startswith('http'):
-                        if "wenweipo" in url:
-                            href = f"https://www.wenweipo.com{href}"
-                        elif "takungpao" in url:
-                            href = f"http://www.takungpao.com.hk{href}"
-                        elif "thestandard" in url:
-                            # lstrip prevents double slashes if the link already starts with one
-                            href = f"https://www.thestandard.com.hk/{href.lstrip('/')}"
-                        elif "am730" in url:
-                            # am730 links usually start with /news/ or /column/
-                            href = f"https://www.am730.com.hk{href}"
+                if len(title) > 10 and raw_href:
+                    full_url = urljoin(url, raw_href.strip())
+                    log.debug(f"Repaired URL for {source_name}: {full_url}") # Uncomment to see it in action
                     
                     entries.append({
                         "title": title,
-                        "body": "", # Web scraping doesn't give us the body easily without clicking
-                        "link": href,
+                        "body": "",
+                        "link": full_url,
                         "source_type": source_type,
                         "source_name": source_name
                     })
@@ -205,14 +197,14 @@ def fetch_html_tenders(url, source_name):
             soup = BeautifulSoup(response.text, 'lxml')
             for tag in soup.find_all('a', href=True):
                 text = tag.get_text().strip()
-                href = tag['href']
+                raw_href = tag['href'].strip()
                 
                 # Keep your original filtering logic exactly as it was
                 if any(k.lower() in text.lower() for k in BIZ_MARKERS) and len(text) > 10:
                     if any(m.lower() in text.lower() for m in NM_MARKERS):
                         if is_expired(text): 
                             continue
-                        full_url = urljoin(url, href)
+                        full_url = urljoin(url, raw_href)
                         entries.append({
                             "title": text, 
                             "link": full_url, 
@@ -253,7 +245,7 @@ def summarize(entries):
         articles_text += f"TITLE: {e.get('title', 'No Title')}\n"
         articles_text += f"URL: {e.get('link', '')}\n\n"
 
-    prompt = f"""You are a senior Business Development Manager for a QS firm.
+    prompt = f"""You are a senior Business Development Manager for a QS firm. Your task is to curate a highly professional Opportunity Pipeline Report for Senior Partners.
     
     Start with the following:
     To: Senior Partners / Board of Directors
@@ -261,7 +253,17 @@ def summarize(entries):
     Date: {datetime.now().strftime('%B %d, %Y')}
     Subject: Northern Metropolis (NM) & Major Projects: Opportunity Pipeline Report
 
-    CRITICAL: Since this is a weekly digest, include a 3-bullet point 'Executive Strategic Summary' before listing the entries. Add an extra empty line before this summary.
+    CRITICAL: Since this is a weekly digest, include a 3-bullet point 'Executive Strategic Summary' before listing the entries highlighting only the most significant movements in the NM landscape. Add an extra empty line before this summary.
+
+    CATEGORIES TO ORGANIZE BY:
+    1. "### Upcoming Tenders & Consultancy Notices"
+    2. "### HKSAR Gov Press Releases"
+    3. "### NM Development News from Various Media"
+    
+    QUALIFICATION RULES (DO NOT INCLUDE AN ENTRY IF):
+    1. It is an event that has already occurred or opened (e.g., "Fanling Bypass opening," "Exhibition unveiling"). These are no longer opportunities.
+    2. it is a high-level political debate or tourism news (e.g., "Golden Week," "LegCo budget debates") that lacks tangible construction, procurement, or asset management scope.
+    3. The link is a generic 404 or index page.
 
     STRATEGIC FOCUS SECTORS:
     - Transport and Infrastructure
@@ -272,19 +274,18 @@ def summarize(entries):
     - Industrial / Data Centre
     - Maintenance / Energy
 
-    CATEGORIES TO ORGANIZE BY:
-    1. "### Upcoming Tenders & Consultancy Notices"
-    2. "### HKSAR Gov Press Releases"
-    3. "### NM Development News from Various Media"
+    OUTPUT STRUCTURE FOR EACH ENTRY:
+    *Title:* [English Title] | [Traditional Chinese Title]
+    *Summary:* [A concise 2-3 sentence summary of the news/tender details.]
+    *Sector:* [Chosen Strategic Sector]
+    *Opportunity Analysis:* [Provide a sharp, 2-sentence analysis of how the QS firm could provide value. Analyze through a QS lens (e.g., Pre-contract cost planning, cost estimation, procurement strategy, budget management, post-contract services, or tenancy valuation). Avoid generic boilerplate.]
+    [View Source Detail >](URL)
 
-    RULES:
-    - Analyze every entry through a QS lens (cost estimation, procurement, contract management, or tenancy valuation).
-    - FORMATTING: Each bullet point MUST follow this structure:
-      * *Title:* [Exact title or headline from the source]
-        *QS Lead:* [Detailed QS-specific insight]
-        *Sector:* [Chosen Strategic Sector]
-        [Detailed explanation of the technical components, e.g., MEP, cleanroom, or A&A value.]
-        [View Source Detail >](URL)
+    STRICT FORMATTING RULES:
+    - If a source is in Chinese, you MUST translate the title to English for the bilingual header.
+    - If a source is in English, you MUST provide the Traditional Chinese translation for the title.
+    - NO GENERIC FILLER. Do not mention "MEP, fit-out, or A&A" unless the specific project type calls for it (e.g., Data centers or Office towers).
+    - If no genuine QS opportunity exists for an entry, discard it entirely.
     - Omit expired dates. Add an extra empty line between different bullet points.
 
     Articles:
