@@ -280,8 +280,9 @@ def summarize(entries):
     
     QUALIFICATION RULES (DO NOT INCLUDE AN ENTRY IF):
     1. It is an event that has already occurred or opened (e.g., "Fanling Bypass opening," "Exhibition unveiling"). These are no longer opportunities.
-    2. it is a high-level political debate or tourism news (e.g., "Golden Week," "LegCo budget debates") that lacks tangible construction, procurement, or asset management scope.
+    2. It is a high-level political debate or tourism news (e.g., "Golden Week," "LegCo budget debates") that lacks tangible construction, procurement, or asset management scope.
     3. The link is a generic 404 or index page.
+    4. No genuine QS opportunity exists for an entry.
 
     STRATEGIC FOCUS SECTORS:
     - Transport and Infrastructure
@@ -296,15 +297,14 @@ def summarize(entries):
     *Title:* [English Title] | [Traditional Chinese Title]
     *Summary:* [A concise 2-3 sentence summary of the news/tender details.]
     *Sector:* [Chosen Strategic Sector]
-    *Opportunity Analysis:* [Provide a sharp, 2-sentence analysis of how the QS firm could provide value. Analyze through a QS lens (e.g., Pre-contract cost planning, cost estimation, procurement strategy, budget management, post-contract services, or tenancy valuation). Avoid generic boilerplate.]
+    *Opportunity Analysis:* [Provide a sharp, 2-sentence analysis of how the QS firm could provide value. Analyze through a QS lens (e.g., Pre-contract cost planning, cost estimation, procurement strategy, budget management, post-contract services, or tenancy valuation). AVOID repeating "ensure project is on budget and on time" for every entry. Be specific about the work, e.g., 'Requires complex life-cycle costing for high-tech bio-facilities' or 'High demand for land resumption valuation services'.]]
     [View Source Detail >](URL)
 
-    STRICT FORMATTING RULES:
-    - If a source is in Chinese, you MUST translate the title to English for the bilingual header.
-    - If a source is in English, you MUST provide the Traditional Chinese translation for the title.
-    - NO GENERIC FILLER. Do not mention "MEP, fit-out, or A&A" unless the specific project type calls for it (e.g., Data centers or Office towers).
-    - If no genuine QS opportunity exists for an entry, discard it entirely.
-    - Omit expired dates. Add an extra empty line between different bullet points.
+   STRICT FORMATTING RULES:
+    1. BILINGUAL HEADERS: Every single Title MUST be bilingual. If the source is English, you MUST translate it to Traditional Chinese. If the source is Chinese, you MUST translate it to English.
+    2. NO REPETITION: Do not use the same "Opportunity Analysis" for different entries. Each project must have a unique value proposition.
+    3. NO BULLET POINTS FOR EACH LINE of an entry: Use only one bullet point next to the title of each full entry.
+    4. SPACING: Add one empty line between each full entry.
 
     Articles:
     {articles_text}"""
