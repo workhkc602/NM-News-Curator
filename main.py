@@ -137,26 +137,45 @@ def fetch_rss(url, source_name, source_type, timeout=20.0):
         return []
 def fetch_web_headlines(url, source_name, source_type):
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36", # <--- ADD THIS COMMA
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
         "Referer": "https://www.google.com/"
     }
     entries = []
+    
     try:
-        # Use verify=False if you still encounter SSL issues with these sites
-        with httpx.Client(headers=headers, follow_redirects=True, timeout=20.0, verify=False) as client:
-            response = client.get(url)
+        # We open the client once
+        with httpx.Client(headers=headers, follow_redirects=True, timeout=25.0, verify=False) as client:
+            
+            # --- START OF RETRY LOGIC ---
+            response = None
+            for attempt in range(3): # Try up to 3 times
+                try:
+                    response = client.get(url)
+                    if response.status_code == 200:
+                        break # Success! Break out of the retry loop
+                    
+                    log.warning(f"Attempt {attempt + 1} for {source_name} returned status {response.status_code}")
+                except Exception as e:
+                    log.warning(f"Attempt {attempt + 1} for {source_name} failed: {e}")
+                
+                if attempt < 2: # Don't sleep after the last attempt
+                    time.sleep(2) 
+            
+            # If after 3 tries we still don't have a 200, we exit
+            if not response or response.status_code != 200:
+                log.error(f"Failed to fetch {source_name} after 3 attempts.")
+                return []
+            # --- END OF RETRY LOGIC ---
+
             soup = BeautifulSoup(response.content, 'lxml')
             
-            # This logic targets common HK news patterns (links with titles)
-            # We look for <a> tags inside <h3> or <h4> or specific news-list classes
             for link in soup.select('a[href*="/news/"], a[href*="/article/"]'):
                 title = link.get_text(strip=True)
                 raw_href = link.get('href')
                 
-                # Filter out short fragments or empty titles
                 if len(title) > 10 and raw_href:
                     full_url = urljoin(url, raw_href.strip())
-                    log.debug(f"Repaired URL for {source_name}: {full_url}") # Uncomment to see it in action
                     
                     entries.append({
                         "title": title,
@@ -166,7 +185,6 @@ def fetch_web_headlines(url, source_name, source_type):
                         "source_name": source_name
                     })
         
-        # Keep only the top 15 to avoid overwhelming the AI
         return entries[:15]
         
     except Exception as ex:
