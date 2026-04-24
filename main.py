@@ -293,11 +293,20 @@ def summarize(entries):
     - Industrial / Data Centre
     - Maintenance / Energy
 
-    OUTPUT STRUCTURE FOR EACH ENTRY:
+    OUTPUT STRUCTURE FOR EACH ENTRY IN CATEGORY 1 "Upcoming Tenders & Consultancy Notices":
     *Title:* [English Title] | [Traditional Chinese Title]
-    *Summary:* [A concise 2-3 sentence summary of the news/tender details.]
+    *Summary:* [A concise 2-3 sentence summary of the tender release details.]
     *Sector:* [Chosen Strategic Sector]
-    *Opportunity Analysis:* [Provide a sharp, 2-sentence analysis of how the QS firm could provide value. Analyze through a QS lens (e.g., Pre-contract cost planning, cost estimation, procurement strategy, budget management, post-contract services, or tenancy valuation). AVOID repeating "ensure project is on budget and on time" for every entry. Be specific about the work, e.g., 'Requires complex life-cycle costing for high-tech bio-facilities' or 'High demand for land resumption valuation services'.]]
+    *Opportunity Analysis:* [Provide a sharp, 2-sentence analysis of how the QS firm could provide value. Analyze through a QS lens (e.g., Pre-contract cost planning, cost estimation, procurement strategy, budget management, post-contract services, or tenancy valuation). AVOID repeating "ensure project is on budget and on time" for every entry. Be specific about the work, e.g., 'Requires complex life-cycle costing for high-tech bio-facilities' or 'High demand for land resumption valuation services'.]
+    [View Source Detail >](URL)
+
+     STRICT FORMATTING RULES FOR CATEGORY 1:
+    - NO REPETITION: Do not use the same "Opportunity Analysis" for different entries. Each project must have a unique value proposition.
+    
+     OUTPUT STRUCTURE FOR EACH ENTRY IN CATEGORY 2 "HKSAR Gov Press Releases" AND CATEGORY 3 "NM Development News from Various Media":
+    *Title:* [English Title] | [Traditional Chinese Title]
+    *Summary:* [A concise 2-3 sentence summary of the news details.]
+    *Sector:* [Chosen Strategic Sector]
     [View Source Detail >](URL)
 
    STRICT FORMATTING RULES:
@@ -316,6 +325,15 @@ def summarize(entries):
        - "Pre-contract cost planning" -> "招標前成本規劃"
        - "Procurement strategy" -> "採購策略"
        - "Tenancy valuation" -> "租務估值"
+    
+    AUDIT LOG REQUIREMENT:
+    At the very end of your report, add a section titled '### Discarded Entries for Audit'. 
+    List every article from the input that you did NOT include in the main report. 
+    For each, provide:
+    - The original Title
+    - A 1-sentence reason why it failed your qualification rules.
+
+    This section is for internal review only.
 
     Articles:
     {articles_text}"""
