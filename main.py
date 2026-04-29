@@ -294,19 +294,20 @@ def summarize(entries):
     3. The link is a generic 404.
     *NOTE: DO NOT discard high-level news about Advisory Committees, Task Forces, or major developer plans (e.g., Wheelock's Kwu Tung plans). These are vital for strategic planning.*
 
-    STRATEGIC DIRECTIVE:
-    Analyze entries through a QS lens. Prioritize the Data Centre Hub developments, focusing on high-spec M&E fit-out opportunities and complex life-cycle costing.
-
     OUTPUT STRUCTURE FOR CATEGORY 1:
     * **Title:** [English Title] | [Traditional Chinese Title]
       **Summary:** [2-3 sentences.]
       **Sector:** [Chosen Strategic Sector]
-      **Opportunity Analysis:** [2-sentence unique QS value proposition. Use terms like 招標前成本規劃 or 採購策略.]
+      **Opportunity Analysis:** [2-sentence unique QS value proposition. ONLY IF SPECIFIC/TECHNICAL. OTHERWISE OMIT.]
       [View Source Detail >](URL)
+
+    STRATEGIC DIRECTIVE FOR CATEGORY 1:
+    1. Analyze entries through a QS lens. Prioritize the Data Centre Hub developments, focusing on high-spec M&E fit-out opportunities and complex life-cycle costing.
+    2. **CONDITIONAL ANALYSIS:** Only include "Opportunity Analysis" if you can provide a SHARP, technical QS insight (e.g., M&E fit-out, 招標前成本規劃, or land resumption). IF the insight is generic business filler, OMIT the "Opportunity Analysis" line entirely.
 
     OUTPUT STRUCTURE FOR CATEGORIES 2 & 3:
     * **Title:** [English Title] | [Traditional Chinese Title]
-      **Summary:** [2-3 sentences.]
+      **Summary:** [2-3 sentences to summarise the content only. DO NOT ADD ANY COMMENTS OR ANALYSIS.]
       **Sector:** [Chosen Strategic Sector]
       [View Source Detail >](URL)
 
@@ -337,7 +338,7 @@ def summarize(entries):
                 },
                 json={
                     "model": LLM_MODEL,
-                    "messages": [{"role": "system", "content": "You are a resourceful formatting and translation engine. You follow the 'OUTPUT TEMPLATE' exactly."},
+                    "messages": [{"role": "system", "content": "You are a resourceful formatting and translation engine. You follow the 'OUTPUT TEMPLATE' and 'STRATEGIC DIRECTIVE' exactly. You never use boilerplate business jargon. If you cannot provide a unique technical QS insight, you skip the Opportunity Analysis line entirely. All titles MUST be bilingual and start with '* **'."},
                                  {"role": "user", "content": prompt}],
                     "temperature": 0.1
                 }, 
