@@ -29,6 +29,11 @@
     "url": "https://www.am730.com.hk/%E5%8D%B3%E6%99%82%E6%96%B0%E8%81%9E",
     "category": "news"
   },
+  {
+    "name": "RTHK - Local News",
+    "url": "https://rthk.hk/rthk/news/rss/c_expressnews_clocal.xml",
+    "category": "news"
+  },
    {
     "name": "Wen Wei Po - Local News",
     "url": "https://www.wenweipo.com/",
@@ -50,13 +55,23 @@
     "category": "gov-hk-finance"
   },
   {
-    "name": "GovHK - Press Releases",
+    "name": "GovHK - Press Releases (Today)",
     "url": "https://www.info.gov.hk/gia/general/today.htm",
+    "category": "gov-hk-news-today"
+  },
+    {
+    "name": "GovHK - Press Releases",
+    "url": "https://www.info.gov.hk/gia/rss/general_zh.xml",
     "category": "gov-hk-news"
   },
   {
     "name": "LegCo HKSAR (YouTube)",
     "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC29NAwW0H0kvi239sD7kT7w",
     "category": "gov-hk-video"
+  },
+   {
+    "name": "TVB News Official (YouTube)",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCKh2nOrPXCW4nXuhr_ZTIzg",
+    "category": "tvb-hk-news"
   }
 ]
