@@ -280,71 +280,46 @@ def summarize(entries):
 
     ### Executive Strategic Summary
     Synthesize a 3-bullet point summary of the most significant strategic movements from the provided articles. 
-    CRITICAL: Do NOT repeat the text of these instructions. Instead, report on the actual news found.
+    CRITICAL: Do NOT repeat the text of these instructions. Do NOT say "I was told to pay attention to data centers." Instead, report on the actual data center news found. If significant data center activity is present, highlight the M&E fit-out implications naturally.
     (Add an extra empty line before this summary).
 
     CATEGORIES TO ORGANIZE BY:
     1. "### Upcoming Tenders & Consultancy Notices"
     2. "### HKSAR Gov Press Releases"
-    3. "### NM Strategic Policy & Market Context"
+    3. "### NM Strategic Policy & Market Context" (Formerly Media News - Include Committees, Task Forces, and Developer movements here)
     
     QUALIFICATION RULES (DO NOT INCLUDE AN ENTRY IF):
-    1. It is an event that has already occurred or opened (e.g., "Fanling Bypass opening," "Exhibition unveiling"). These are no longer opportunities.
-    2. It is pure tourism/general interest (e.g., "Golden Week," "LegCo budget debates").
-    3. The link is a generic 404 or index page.
+    1. It is an event that has already occurred (e.g., "Bypass now open").
+    2. It is pure tourism/general interest (e.g., "Golden Week traffic").
+    3. The link is a generic 404.
     *NOTE: DO NOT discard high-level news about Advisory Committees, Task Forces, or major developer plans (e.g., Wheelock's Kwu Tung plans). These are vital for strategic planning.*
 
-    STRATEGIC FOCUS SECTORS:
-    - Transport and Infrastructure
-    - Residential / Public Housing
-    - Commercial / Corporate Fitouts
-    - Retail / Hospitality
-    - Healthcare / Education
-    - Industrial / Data Centre
-    - Maintenance / Energy
+    STRATEGIC DIRECTIVE:
+    Analyze entries through a QS lens. Prioritize the Data Centre Hub developments, focusing on high-spec M&E fit-out opportunities and complex life-cycle costing.
 
-    OUTPUT STRUCTURE FOR EACH ENTRY IN CATEGORY 1 "Upcoming Tenders & Consultancy Notices":
-    *Title:* [English Title] | [Traditional Chinese Title]
-    *Summary:* [A concise 2-3 sentence summary of the tender release details.]
-    *Sector:* [Chosen Strategic Sector]
-    *Opportunity Analysis:* [Provide a sharp, 2-sentence analysis of how the QS firm could provide value. Analyze through a QS lens (e.g., Pre-contract cost planning, cost estimation, procurement strategy, budget management, post-contract services, or tenancy valuation). AVOID repeating "ensure project is on budget and on time" for every entry. Be specific about the work, e.g., 'Requires complex life-cycle costing for high-tech bio-facilities' or 'High demand for land resumption valuation services'.]
-    [View Source Detail >](URL)
+    OUTPUT STRUCTURE FOR CATEGORY 1:
+    * **Title:** [English Title] | [Traditional Chinese Title]
+      **Summary:** [2-3 sentences.]
+      **Sector:** [Chosen Strategic Sector]
+      **Opportunity Analysis:** [2-sentence unique QS value proposition. Use terms like 招標前成本規劃 or 採購策略.]
+      [View Source Detail >](URL)
 
-     STRICT FORMATTING RULES FOR CATEGORY 1:
-    1. NO REPETITION: Do not use the same "Opportunity Analysis" for different entries. Each project must have a unique value proposition.
+    OUTPUT STRUCTURE FOR CATEGORIES 2 & 3:
+    * **Title:** [English Title] | [Traditional Chinese Title]
+      **Summary:** [2-3 sentences.]
+      **Sector:** [Chosen Strategic Sector]
+      [View Source Detail >](URL)
+
+    STRICT FORMATTING RULES:
+    1. ONE BULLET PER ENTRY: Only the "Title" line starts with a bullet (*). All subsequent lines (Summary, Sector, Analysis) must be indented or plain text, NOT bulleted.
+    2. BILINGUAL HEADERS: All titles MUST be bilingual.
+    3. SPACING: Add one empty line between each full entry.
+    4. TERMINOLOGY: "The Loop" -> "落馬洲河套地區"; "Northern Metropolis" -> "北部都會區".
+
+    ### Discarded Entries for Audit
+    List every article NOT included above.
+    - Title: [Title] | Reason: [1-sentence reason]
     
-     OUTPUT STRUCTURE FOR EACH ENTRY IN CATEGORY 2 "HKSAR Gov Press Releases" AND CATEGORY 3 "NM Strategic Policy & Market Context":
-    *Title:* [English Title] | [Traditional Chinese Title]
-    *Summary:* [A concise 2-3 sentence summary of the news details.]
-    *Sector:* [Chosen Strategic Sector]
-    [View Source Detail >](URL)
-
-   STRICT FORMATTING RULES:
-    1. BILINGUAL HEADERS: Every single Title MUST be bilingual. If the source is English, you MUST translate it to Traditional Chinese. If the source is Chinese, you MUST translate it to English.
-    2. NO REPETITION: Do not use the same "Opportunity Analysis" for different entries. Each project must have a unique value proposition.
-    3. ONE BULLET PER ENTRY: Only the "Title" line starts with a bullet (*). All subsequent lines (Summary, Sector) must be indented or plain text, NOT bulleted.
-    4. SPACING: Add one empty line between each full entry.
-
-    STRICT TERMINOLOGY & CONTEXT RULES:
-    1. CONTEXTUAL TRANSLATION: "The Loop" MUST be translated as "落馬洲河套地區" (Lok Ma Chau Loop). 
-       - NEVER use literal translations like "循環線" or "回路".
-       - If the project refers to the tech park within it, use "港深創新及科技園" (HSITP).
-    2. NORTHERN METROPOLIS: Always translate as "北部都會區".
-    3. SAN TIN TECHNOPOLE: Always translate as "新田科技城".
-    4. QS DICTIONARY: Use formal industry terms:
-       - "Pre-contract cost planning" -> "招標前成本規劃"
-       - "Procurement strategy" -> "採購策略"
-       - "Tenancy valuation" -> "租務估值"
-    
-    AUDIT LOG REQUIREMENT:
-    At the very end of your report, add a section titled '### Discarded Entries for Audit'. 
-    List every article from the input that you did NOT include in the main report. 
-    For each, provide:
-    - The original Title
-    - A 1-sentence reason why it failed your qualification rules.
-
-    This section is for internal review only.
-
     Articles:
     {articles_text}"""
 
@@ -362,7 +337,7 @@ def summarize(entries):
                 },
                 json={
                     "model": LLM_MODEL,
-                    "messages": [{"role": "system", "content": "You are a helpful assistant."},
+                    "messages": [{"role": "system", "content": "You are a resourceful formatting and translation engine. You follow the 'OUTPUT TEMPLATE' exactly."},
                                  {"role": "user", "content": prompt}],
                     "temperature": 0.1
                 }, 
