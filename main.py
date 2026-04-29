@@ -292,7 +292,11 @@ def summarize(entries):
     1. It is an event that has already occurred (e.g., "Bypass now open").
     2. It is pure tourism/general interest (e.g., "Golden Week traffic").
     3. The link is a generic 404.
-    *NOTE: DO NOT discard high-level news about Advisory Committees, Task Forces, or major developer plans (e.g., Wheelock's Kwu Tung plans). These are vital for strategic planning.*
+    
+    QUALIFICATION & DISCARD RULES:
+    1. GEOGRAPHY IS PRIORITY: If an entry mentions a specific Northern Metropolis zone (e.g., Kwu Tung, Hung Shui Kiu, San Tin, Fanling North), INCLUDE IT even if it is a private developer update or market sentiment news.
+    2. PRIVATE SECTOR RELEVANCE: News about major developers (e.g., Wheelock, SHKP, Henderson) launching projects in NM zones is STRATEGIC context for our partners. Do NOT discard these as "market trends."
+    3. Discard: Only discard 404s, past events (e.g., "The bypass opened yesterday"), or news entirely unrelated to HK construction/land (e.g., "6m tourists for Golden Week").
 
     OUTPUT STRUCTURE FOR CATEGORY 1:
     * **Title:** [English Title] | [Traditional Chinese Title]
