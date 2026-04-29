@@ -38,7 +38,11 @@ BIZ_MARKERS = [
     "Large-scale land disposal", "大口徑土地供應", "大口径土地供应",
     "Strategic Enterprise", "重點企業", "重点企业", "Funding approval", "撥款", "拨款", "財委會", "财委会",
     "Pilot area", "試點", "试点", "先行先試", "先行先试", "Anchor enterprises", "龍頭企業", "龙头企业",
-    "Public-private partnership", "PPP", "公私營合作", "公私营合作"
+    "Public-private partnership", "PPP", "公私營合作", "公私营合作",
+    "Data Park", "數據園區", "数据园区", "Data Centre Hub", "數據中心集群", "数据中心集群",
+    "New Industrialization", "新型工業化", "新型工业化", "Financing", "融資", "融资",
+    "Task Force", "專責小組", "专责小组", "Advisory Committee", "諮詢委員會", "咨询委员会",
+    "HKPC", "Productivity Council", "生產力局", "生产力局", "Inspection", "考察"
 ]
 
 NM_MARKERS = [
@@ -57,7 +61,10 @@ NM_MARKERS = [
     "Dedicated legislation", "專屬法例", "专属法例", "北都條例", "北都条例",
     "Industry-driven", "產業帶動", "产业带动", "產業導向", "产业导向", "Hetao Hong Kong Park", "河套香港園區", "河套香港园区",
     "Sejong", "世宗市", "Korea visit", "15th Five-Year Plan", "十五五",
-    "I&T ecosystem", "創科生態圈", "创科生态圈",
+    "I&T ecosystem", "創科生態圈", "创科生态圈","Sandy Ridge Data Park", "沙嶺數據園區", "沙岭数据园区",
+    "Financial Advisory Working Group", "金融諮詢工作小組", "金融咨询工作小组",
+    "OASES", "引進重點企業辦公室", "引进重点企业办公室",
+    "Innovation and Technology Commission", "創新科技署", "创新科技署"
     "YL/20", "ND/20", "CE 16/20", "CE 8/20", "CE 9/20", "CE 14/20", "SS R50"
 ]
 
@@ -282,7 +289,8 @@ def summarize(entries):
     1. It is an event that has already occurred or opened (e.g., "Fanling Bypass opening," "Exhibition unveiling"). These are no longer opportunities.
     2. It is a high-level political debate or tourism news (e.g., "Golden Week," "LegCo budget debates") that lacks tangible construction, procurement, or asset management scope.
     3. The link is a generic 404 or index page.
-    4. No genuine QS opportunity exists for an entry.
+
+    PAY SPECIAL ATTENTION to projects related to Data Centre Hub in the Northern Metropolis area, which represents a significant shift in QS scope toward high-spec M&E fit-outs.
 
     STRATEGIC FOCUS SECTORS:
     - Transport and Infrastructure
