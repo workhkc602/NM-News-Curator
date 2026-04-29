@@ -278,19 +278,21 @@ def summarize(entries):
     Date: {datetime.now().strftime('%B %d, %Y')}
     Subject: Northern Metropolis (NM) & Major Projects: Opportunity Pipeline Report
 
-    CRITICAL: Since this is a weekly digest, include a 3-bullet point 'Executive Strategic Summary' before listing the entries highlighting only the most significant movements in the NM landscape. Add an extra empty line before this summary.
+    ### Executive Strategic Summary
+    Synthesize a 3-bullet point summary of the most significant strategic movements from the provided articles. 
+    CRITICAL: Do NOT repeat the text of these instructions. Instead, report on the actual news found.
+    (Add an extra empty line before this summary).
 
     CATEGORIES TO ORGANIZE BY:
     1. "### Upcoming Tenders & Consultancy Notices"
     2. "### HKSAR Gov Press Releases"
-    3. "### NM Development News from Various Media"
+    3. "### NM Strategic Policy & Market Context"
     
     QUALIFICATION RULES (DO NOT INCLUDE AN ENTRY IF):
     1. It is an event that has already occurred or opened (e.g., "Fanling Bypass opening," "Exhibition unveiling"). These are no longer opportunities.
-    2. It is a high-level political debate or tourism news (e.g., "Golden Week," "LegCo budget debates") that lacks tangible construction, procurement, or asset management scope.
+    2. It is pure tourism/general interest (e.g., "Golden Week," "LegCo budget debates").
     3. The link is a generic 404 or index page.
-
-    PAY SPECIAL ATTENTION to projects related to Data Centre Hub in the Northern Metropolis area, which represents a significant shift in QS scope toward high-spec M&E fit-outs.
+    *NOTE: DO NOT discard high-level news about Advisory Committees, Task Forces, or major developer plans (e.g., Wheelock's Kwu Tung plans). These are vital for strategic planning.*
 
     STRATEGIC FOCUS SECTORS:
     - Transport and Infrastructure
@@ -309,9 +311,9 @@ def summarize(entries):
     [View Source Detail >](URL)
 
      STRICT FORMATTING RULES FOR CATEGORY 1:
-    - NO REPETITION: Do not use the same "Opportunity Analysis" for different entries. Each project must have a unique value proposition.
+    1. NO REPETITION: Do not use the same "Opportunity Analysis" for different entries. Each project must have a unique value proposition.
     
-     OUTPUT STRUCTURE FOR EACH ENTRY IN CATEGORY 2 "HKSAR Gov Press Releases" AND CATEGORY 3 "NM Development News from Various Media":
+     OUTPUT STRUCTURE FOR EACH ENTRY IN CATEGORY 2 "HKSAR Gov Press Releases" AND CATEGORY 3 "NM Strategic Policy & Market Context":
     *Title:* [English Title] | [Traditional Chinese Title]
     *Summary:* [A concise 2-3 sentence summary of the news details.]
     *Sector:* [Chosen Strategic Sector]
@@ -320,7 +322,7 @@ def summarize(entries):
    STRICT FORMATTING RULES:
     1. BILINGUAL HEADERS: Every single Title MUST be bilingual. If the source is English, you MUST translate it to Traditional Chinese. If the source is Chinese, you MUST translate it to English.
     2. NO REPETITION: Do not use the same "Opportunity Analysis" for different entries. Each project must have a unique value proposition.
-    3. NO BULLET POINTS FOR EACH LINE of an entry: Use only one bullet point next to the title of each full entry.
+    3. ONE BULLET PER ENTRY: Only the "Title" line starts with a bullet (*). All subsequent lines (Summary, Sector) must be indented or plain text, NOT bulleted.
     4. SPACING: Add one empty line between each full entry.
 
     STRICT TERMINOLOGY & CONTEXT RULES:
@@ -362,7 +364,7 @@ def summarize(entries):
                     "model": LLM_MODEL,
                     "messages": [{"role": "system", "content": "You are a helpful assistant."},
                                  {"role": "user", "content": prompt}],
-                    "temperature": 0.2
+                    "temperature": 0.1
                 }, 
                 timeout=300
             )
