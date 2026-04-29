@@ -4,9 +4,14 @@
     "url": "https://www.scmp.com/rss/2/feed/",
     "category": "media-en"
   },
-  {
+  #{
     "name": "The Standard - HK News",
     "url": "https://www.thestandard.com.hk/section-list/2/hong-kong/",
+    "category": "news"
+  },
+    {
+    "name": "The Standard - HK News (Gen RSS)",
+    "url": "https://rss.app/feeds/ZATcaxqVJsru7nB6.xml",
     "category": "news"
   },
   {
@@ -17,6 +22,16 @@
   {
     "name": "Sing Tao - Realtime News",
     "url": "https://std.stheadline.com/rss/news/hongkong",
+    "category": "media-zh"
+  },
+   {
+    "name": "Sing Tao - Kong News",
+    "url": "https://politepaul.com/fd/Pk3H8uz61Frj.xml",
+    "category": "media-zh"
+  },
+    {
+    "name": "Sing Tao - (Info Tech News)",
+    "url": "https://politepaul.com/fd/jACfTPRhUuCj.xml",
     "category": "media-zh"
   },
   {
@@ -39,9 +54,19 @@
     "url": "https://www.wenweipo.com/",
     "category": "media-zh"
   },
+    {
+    "name": "Wen Wei Po（Gen RSS)",
+    "url": "https://politepaul.com/fd/AG7Tn0bQwMzD.xml",
+    "category": "media-zh"
+  },
   {
     "name": "Ta Kung Pao - Local News",
     "url": "http://www.takungpao.com.hk/",
+    "category": "media-zh"
+  },
+    {
+    "name": "Ta Kung Pao（Gen RSS)",
+    "url": "https://politepaul.com/fd/yzmIPZheTzAU.xml",
     "category": "media-zh"
   },
   {
