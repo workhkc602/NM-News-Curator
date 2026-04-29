@@ -175,7 +175,22 @@ def fetch_web_headlines(url, source_name, source_type):
                 return []
             # --- END OF RETRY LOGIC ---
 
-            soup = BeautifulSoup(response.content, 'lxml')
+            # 1. Detect if the content is XML or HTML
+            content_type = response.headers.get('Content-Type', '').lower()
+            # We check the URL extension, the Header, and the actual start of the file
+            is_xml = (
+                url.endswith('.xml') or 
+                'xml' in content_type or 
+                response.content.strip().startswith(b'<?xml')
+            )
+
+            # 2. Assign the correct parser
+            if is_xml:
+                # Uses the XML parser for RSS/Bridge links to stop the warning
+                soup = BeautifulSoup(response.content, 'xml')
+            else:
+                # Uses the HTML parser for standard news sites (Wen Wei Po, Ta Kung Pao)
+                soup = BeautifulSoup(response.content, 'lxml')
             
             for link in soup.select('a[href*="/news/"], a[href*="/article/"]'):
                 title = link.get_text(strip=True)
