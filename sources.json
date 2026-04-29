@@ -4,11 +4,6 @@
     "url": "https://www.scmp.com/rss/2/feed/",
     "category": "media-en"
   },
-  #{
-    "name": "The Standard - HK News",
-    "url": "https://www.thestandard.com.hk/section-list/2/hong-kong/",
-    "category": "news"
-  },
     {
     "name": "The Standard - HK News (Gen RSS)",
     "url": "https://rss.app/feeds/ZATcaxqVJsru7nB6.xml",
