@@ -368,7 +368,7 @@ def summarize(entries):
                     "model": LLM_MODEL,
                     "messages": [{"role": "system", "content": "You are a resourceful formatting and translation engine. You follow the 'OUTPUT TEMPLATE' and 'STRATEGIC DIRECTIVE' exactly. You never use boilerplate business jargon. If you cannot provide a unique technical QS insight, you skip the Opportunity Analysis line entirely. All titles MUST be bilingual and start with '* **'."},
                                  {"role": "user", "content": prompt}],
-                    "temperature": 0.0
+                    "temperature": 0.1
                 }, 
                 timeout=300
             )
