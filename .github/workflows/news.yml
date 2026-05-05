@@ -2,10 +2,9 @@ name: Northern Metropolis Digest
 
 on:
   schedule:
-    # 7:30 AM every Monday in Hong Kong Time
-    - cron: '17 8 * * 1'
+    - cron: '17 8 * * 1,3'
       timezone: "Asia/Hong_Kong" 
-  workflow_dispatch: # Keeps the "Run" button active for testing
+  workflow_dispatch:
 
 jobs:
   run:
