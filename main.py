@@ -324,6 +324,15 @@ def summarize(entries):
     1. Analyze entries through a QS lens. Prioritize the Data Centre Hub developments, focusing on high-spec M&E fit-out opportunities and complex life-cycle costing.
     2. **CONDITIONAL ANALYSIS:** Only include "Opportunity Analysis" if you can provide a SHARP, technical QS insight (e.g., M&E fit-out, 招標前成本規劃, or land resumption). IF the insight is generic business filler, OMIT the "Opportunity Analysis" line entirely.
 
+    STRATEGIC FOCUS SECTORS:
+    - Transport and Infrastructure
+    - Residential / Public Housing
+    - Commercial / Corporate Fitouts
+    - Retail / Hospitality
+    - Healthcare / Education
+    - Industrial / Data Centre
+    - Maintenance / Energy
+    
     OUTPUT STRUCTURE FOR CATEGORIES 2 & 3:
     * **Title:** [English Title] | [Traditional Chinese Title]
       **Summary:** [2-3 sentences to summarise the content only. DO NOT ADD ANY COMMENTS OR ANALYSIS.]
