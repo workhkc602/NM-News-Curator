@@ -1,9 +1,4 @@
 [
-  {
-    "name": "SCMP - Hong Kong News",
-    "url": "https://www.scmp.com/rss/2/feed/",
-    "category": "media-en"
-  },
     {
     "name": "The Standard - HK News (Gen RSS)",
     "url": "https://rss.app/feeds/ZATcaxqVJsru7nB6.xml",
@@ -32,11 +27,6 @@
   {
     "name": "am730 - Local News",
     "url": "https://www.am730.com.hk/%E5%8D%B3%E6%99%82%E6%96%B0%E8%81%9E",
-    "category": "news"
-  },
-  {
-    "name": "RTHK - Local News",
-    "url": "https://rthk.hk/rthk/news/rss/c_expressnews_clocal.xml",
     "category": "news"
   },
    {
@@ -78,15 +68,5 @@
     "name": "GovHK - Press Releases",
     "url": "https://www.info.gov.hk/gia/rss/general_zh.xml",
     "category": "gov-hk-news"
-  },
-  {
-    "name": "LegCo HKSAR (YouTube)",
-    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC29NAwW0H0kvi239sD7kT7w",
-    "category": "gov-hk-video"
-  },
-   {
-    "name": "TVB News Official (YouTube)",
-    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCKh2nOrPXCW4nXuhr_ZTIzg",
-    "category": "tvb-hk-news"
   }
 ]
