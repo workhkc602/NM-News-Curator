@@ -68,6 +68,11 @@ NM_MARKERS = [
     "YL/20", "ND/20", "CE 16/20", "CE 8/20", "CE 9/20", "CE 14/20", "SS R50"
 ]
 
+EXCLUDE_MARKERS = [
+    "IT Services", "Software", "Security Service", "Cloud",
+    "App development", "API", "Web-based", "Interface"
+]
+
 LLM_API_KEY = get_env("LLM_API_KEY")
 LLM_BASE_URL = get_env("LLM_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/")
 LLM_MODEL = get_env("LLM_MODEL", "gemini-1.5-flash")
@@ -104,6 +109,22 @@ def is_expired(text):
                 if dt < today: return True
             except: continue
     return False
+
+def is_relevant(title, body=""):
+    """
+    Improved filtering logic with a 'Kill Switch' for IT/Supply tenders.
+    """
+    combined_text = f"{title} {body}".lower()
+    
+    # 1. THE KILL SWITCH: If any excluded word is found, reject immediately
+    if any(m.lower() in combined_text for m in EXCLUDE_MARKERS):
+        return False
+        
+    # 2. MATCHING: Must have at least one Geography AND one Business marker
+    has_nm = any(m.lower() in combined_text for m in NM_MARKERS)
+    has_biz = any(m.lower() in combined_text for m in BIZ_MARKERS)
+    
+    return has_nm and has_biz
 
 # ---------------------------------------------------------------------------
 # 3. Scraping Functions
