@@ -540,9 +540,6 @@ def main():
         log.info(f"Entries matching NM markers: {len(filtered)}")
 
         # 4. Weekly Consolidation Logic
-        import json
-        import os
-        from datetime import datetime
 
         CACHE_FILE = "weekly_opportunity_cache.json"
         # 0=Mon, 2=Wed, 4=Fri. (GitHub Actions uses UTC, so check your cron timing)
