@@ -32,7 +32,10 @@ def get_env(name: str, default: str = None):
 BIZ_MARKERS = [
     "Tender", "招標", "招标", "Contract", "合約", "合约", "Consultancy", "顧問", "顾问",
     "EOI", "Forecast", "Expression of Interest", "Technical and Fee Proposal", 
-    "Land Sale", "賣地", "卖地", "片區開發", "片区开发", "Fitting-out", "Fit-out", "Renovation", 
+    "Land Sale", "賣地", "卖地", "Awarded", "Successful Tenderer", "中標者", "中标者",
+    "批出", "Premium", "地價", "地价", "Acquisition", "Successful Bidder",
+    "Disposal", "土地處置", "土地处置", "Acquired", "收購", "收购", "Lot No.", "地段編號", "地段编号",
+    "片區開發", "片区开发", "Fitting-out", "Fit-out", "Renovation", 
     "翻新", "Tenancy", "租賃", "租赁", "License", "牌照", "Design and Build", "D&B", 
     "Alteration", "Addition", "A&A", "Maintenance", "Repair",
     "Large-scale land disposal", "大口徑土地供應", "大口径土地供应",
@@ -301,7 +304,7 @@ def summarize(entries):
     CATEGORIES TO ORGANIZE BY:
     1. "### Upcoming Tenders & Consultancy Notices"
     2. "### HKSAR Gov Press Releases"
-    3. "### NM Strategic Policy & Market Context" (Formerly Media News - Include Committees, Task Forces, and Developer movements here)
+    3. "### NM Strategic Policy & Market Context" (Includes Land Sale Results, Successful Tenderers, Committees, Task Forces, and Developer movements).
     
     QUALIFICATION RULES (DO NOT INCLUDE AN ENTRY IF):
     1. It is an event that has already occurred (e.g., "Bypass now open").
@@ -312,6 +315,7 @@ def summarize(entries):
     1. GEOGRAPHY IS PRIORITY: If an entry mentions a specific Northern Metropolis zone (e.g., Kwu Tung, Hung Shui Kiu, San Tin, Fanling North), INCLUDE IT even if it is a private developer update or market sentiment news.
     2. PRIVATE SECTOR RELEVANCE: News about major developers (e.g., Wheelock, SHKP, Henderson) launching projects in NM zones is STRATEGIC context for our partners. Do NOT discard these as "market trends."
     3. Discard: Only discard 404s, past events (e.g., "The bypass opened yesterday"), or news entirely unrelated to HK construction/land (e.g., "6m tourists for Golden Week").
+    4. LAND SALE RESULTS: Successful land tender awards (who bought the land and for how much) are high-priority strategic intelligence. Always include these in Category 3. They represent the "start" of a private sector project pipeline for our firm.
 
     OUTPUT STRUCTURE FOR CATEGORY 1:
     * **Title:** [English Title] | [Traditional Chinese Title]
@@ -338,6 +342,12 @@ def summarize(entries):
       **Summary:** [2-3 sentences to summarise the content only. DO NOT ADD ANY COMMENTS OR ANALYSIS.]
       **Sector:** [Chosen Strategic Sector]
       [View Source Detail >](URL)
+
+    STRATEGIC DIRECTIVE FOR CATEGORY 3 (Market Context):
+    1. LAND SALE ANALYSIS: When reporting on a successful land tender award, the summary MUST explicitly state:
+    - The Successful Tenderer (Company Name).
+    - The Winning Bid/Premium (e.g., $581M).
+    - The Intended Use/GFA (e.g., High-Tier Data Centre, 116,365m2).
 
     STRICT FORMATTING RULES:
     1. ONE BULLET PER ENTRY: Only the "Title" line starts with a bullet (*). All subsequent lines (Summary, Sector, Analysis) must be indented or plain text, NOT bulleted.
@@ -460,6 +470,9 @@ def main():
             ("MTRC New Projects", "https://www.mtr.com.hk/en/corporate/tenders/new_projects.html"),
             ("MTRC Operating", "https://www.mtr.com.hk/en/corporate/tenders/or.html"),
             ("MTRC Property", "https://www.mtr.com.hk/en/corporate/tenders/property_services.html"),
+            ("LandsD Tender Results", "https://www.landsd.gov.hk/en/land-tenders/tender-results.html"),
+            ("LandsD Press", "https://www.landsd.gov.hk/en/whats-new/news.html"),
+            ("GIA Land Sale News", "https://www.info.gov.hk/gia/general/today.htm")
 
             # --- INSTITUTIONS ---
             ("HSITP Loop", "https://www.hsitp.org/en/tender-notices"),
