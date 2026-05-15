@@ -472,7 +472,7 @@ def main():
             ("MTRC Property", "https://www.mtr.com.hk/en/corporate/tenders/property_services.html"),
             ("LandsD Tender Results", "https://www.landsd.gov.hk/en/land-tenders/tender-results.html"),
             ("LandsD Press", "https://www.landsd.gov.hk/en/whats-new/news.html"),
-            ("GIA Land Sale News", "https://www.info.gov.hk/gia/general/today.htm")
+            ("GIA Land Sale News", "https://www.info.gov.hk/gia/general/today.htm"),
 
             # --- INSTITUTIONS ---
             ("HSITP Loop", "https://www.hsitp.org/en/tender-notices"),
