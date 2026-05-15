@@ -2,13 +2,18 @@ name: Northern Metropolis Digest
 
 on:
   schedule:
-    - cron: '17 8 * * 1,3'
-      timezone: "Asia/Hong_Kong" 
+    # 08:17 UTC is 16:17 (4:17 PM) Hong Kong Time
+    # 1=Mon, 3=Wed, 5=Fri
+    - cron: '17 8 * * 1,3,5'
   workflow_dispatch:
 
 jobs:
   run:
     runs-on: ubuntu-latest
+    # Grant permission to push the cache file back to the repo
+    permissions:
+      contents: write
+      
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -37,6 +42,18 @@ jobs:
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
           SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
           SENDER_NAME: ${{ secrets.SENDER_NAME }}
-          LANGUAGE: ${{ secrets.LANGUAGE }}
+          # Moved LANGUAGE to a variable as requested
+          LANGUAGE: "Traditional Chinese" 
           TZ_OFFSET: ${{ secrets.TZ_OFFSET }}
           HOURS_LOOKBACK: ${{ secrets.HOURS_LOOKBACK }}
+
+      - name: Commit and Push Weekly Cache
+        # This only runs if the script succeeded and it's Mon or Wed
+        # It saves the JSON file so Friday's run can see it
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add weekly_opportunity_cache.json || echo "No cache file found"
+          git commit -m "Update weekly cache [skip ci]" || echo "No changes to commit"
+          git push
+        if: success()
