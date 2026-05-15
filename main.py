@@ -539,22 +539,72 @@ def main():
 
         log.info(f"Entries matching NM markers: {len(filtered)}")
 
-        # 4. Sorting and Emailing
+        # 4. Weekly Consolidation Logic
+        import json
+        import os
+        from datetime import datetime
+
+        CACHE_FILE = "weekly_opportunity_cache.json"
+        # 0=Mon, 2=Wed, 4=Fri. (GitHub Actions uses UTC, so check your cron timing)
+        today = datetime.now().weekday() 
+
+        if today in [0, 2]:  # Monday or Wednesday: Save and Wait
+            existing_cache = []
+            if os.path.exists(CACHE_FILE):
+                try:
+                    with open(CACHE_FILE, 'r', encoding='utf-8') as f:
+                        existing_cache = json.load(f)
+                except Exception: existing_cache = []
+            
+            # De-duplication: Only add if title is new
+            seen_titles = {item.get('title') for item in existing_cache}
+            for item in filtered:
+                if item.get('title') not in seen_titles:
+                    existing_cache.append(item)
+            
+            with open(CACHE_FILE, 'w', encoding='utf-8') as f:
+                json.dump(existing_cache, f, ensure_ascii=False, indent=4)
+            
+            log.info(f"Stashed {len(filtered)} items. Cache now has {len(existing_cache)} items.")
+            log.info("Monday/Wednesday run complete. Data saved for Friday.")
+            return # IMPORTANT: Stops here so no email is sent today
+
+        # If today is Friday (4) or any other day not listed above, we process the email
+        elif today == 4:
+            if os.path.exists(CACHE_FILE):
+                try:
+                    with open(CACHE_FILE, 'r', encoding='utf-8') as f:
+                        stashed_items = json.load(f)
+                    
+                    # Merge stash into today's filtered list
+                    seen_titles = {item.get('title') for item in filtered}
+                    for item in stashed_items:
+                        if item.get('title') not in seen_titles:
+                            filtered.append(item)
+                    
+                    os.remove(CACHE_FILE) # Reset for next week
+                    log.info(f"Friday: Consolidated {len(filtered)} items from the week.")
+                except Exception as e:
+                    log.error(f"Error loading cache: {e}")
+
+        # --- Original Sorting and Emailing Logic (Now inside the Friday flow) ---
         if filtered:
+            # Maintain your priority sorting for Government Portals
             govt_portals = [t[0] for t in tender_targets]
             filtered.sort(key=lambda x: 0 if x.get('source_name') in govt_portals else 1)
             
-            final_selection = filtered[:35] 
+            # Increased limit slightly to 40 to account for a full week of news
+            final_selection = filtered[:40] 
             log.info(f"Sending {len(final_selection)} items to AI.")
             
             digest = summarize(final_selection)
             if digest and "Error" not in str(digest):
                 send_email(digest)
-                log.info("Process complete: Email sent.")
+                log.info("Process complete: Weekly Friday email sent.")
             else:
                 log.warning("AI Summary returned nothing or an error.")
         else:
-            log.warning("Workflow finished: 0 items matched NM markers.")
+            log.warning("Workflow finished: 0 items matched NM markers this week.")
 
     except Exception as e:
         log.error(f"CRITICAL SCRIPT ERROR: {str(e)}", exc_info=True)
