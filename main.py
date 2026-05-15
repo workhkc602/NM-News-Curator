@@ -468,7 +468,8 @@ def main():
             ("HKBU Tenders", "https://fohome.hkbu.edu.hk/for-suppliers/information/tender-notice.html"),
             ("PolyU Tenders", "https://tendering.polyu.edu.hk/Guest/en/index.htm"),
             ("CityU Tenders", "https://etender.cityu.edu.hk/Guest/en/GeneralInfo.aspx"),
-            ("HKUST Tenders", "https://puro.hkust.edu.hk/etendering")
+            ("HKUST Tenders", "https://puro.hkust.edu.hk/etendering"),
+            ("HKU Tenders", "https://www.feo.hku.hk/finance/suppliers/tendernotice.html")
         ]
 
         # 1. Scrape Tenders
