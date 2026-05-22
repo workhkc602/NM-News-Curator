@@ -67,7 +67,7 @@ NM_MARKERS = [
     "I&T ecosystem", "創科生態圈", "创科生态圈","Sandy Ridge Data Park", "沙嶺數據園區", "沙岭数据园区",
     "Financial Advisory Working Group", "金融諮詢工作小組", "金融咨询工作小组",
     "OASES", "引進重點企業辦公室", "引进重点企业办公室",
-    "Innovation and Technology Commission", "創新科技署", "创新科技署"
+    "Innovation and Technology Commission", "創新科技署", "创新科技署",
     "YL/20", "ND/20", "CE 16/20", "CE 8/20", "CE 9/20", "CE 14/20", "SS R50"
 ]
 
@@ -543,7 +543,8 @@ def main():
 
         CACHE_FILE = "weekly_opportunity_cache.json"
         # 0=Mon, 2=Wed, 4=Fri. (GitHub Actions uses UTC, so check your cron timing)
-        today = datetime.now().weekday() 
+        hkt = timezone(timedelta(hours=8))
+        today = datetime.now(hkt).weekday()
 
         if today in [0, 2]:  # Monday or Wednesday: Save and Wait
             existing_cache = []
