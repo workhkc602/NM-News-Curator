@@ -541,7 +541,9 @@ def main():
 
         # 4. Weekly Consolidation Logic
 
-        CACHE_FILE = "weekly_opportunity_cache.json"
+        base_path = os.path.dirname(os.path.abspath(__file__))
+        CACHE_FILE = os.path.join(base_path, "weekly_opportunity_cache.json")
+        
         # 0=Mon, 2=Wed, 4=Fri. (GitHub Actions uses UTC, so check your cron timing)
         hkt = timezone(timedelta(hours=8))
         today = datetime.now(hkt).weekday()
