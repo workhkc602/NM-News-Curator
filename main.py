@@ -539,53 +539,64 @@ def main():
 
         log.info(f"Entries matching NM markers: {len(filtered)}")
 
-        # 4. Weekly Consolidation Logic
-
+       # 4. Weekly Consolidation Logic
         base_path = os.path.dirname(os.path.abspath(__file__))
         CACHE_FILE = os.path.join(base_path, "weekly_opportunity_cache.json")
         
-        # 0=Mon, 2=Wed, 4=Fri. (GitHub Actions uses UTC, so check your cron timing)
+        # Ensure we are using Hong Kong Time for the day check
         hkt = timezone(timedelta(hours=8))
-        today = datetime.now(hkt).weekday()
+        now_hkt = datetime.now(hkt)
+        today = now_hkt.weekday()  # 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri
+        day_name = now_hkt.strftime('%A')
+        
+        log.info(f"Execution Day (HKT): {day_name} (Weekday index: {today})")
 
-        if today in [0, 2]:  # Monday or Wednesday: Save and Wait
+        # --- MONDAY & WEDNESDAY: STASH ONLY ---
+        if today in [0, 2]:
             existing_cache = []
             if os.path.exists(CACHE_FILE):
                 try:
                     with open(CACHE_FILE, 'r', encoding='utf-8') as f:
                         existing_cache = json.load(f)
-                except Exception: existing_cache = []
+                except Exception: 
+                    existing_cache = []
             
-            # De-duplication: Only add if title is new
             seen_titles = {item.get('title') for item in existing_cache}
+            new_items_count = 0
             for item in filtered:
                 if item.get('title') not in seen_titles:
                     existing_cache.append(item)
+                    new_items_count += 1
             
             with open(CACHE_FILE, 'w', encoding='utf-8') as f:
                 json.dump(existing_cache, f, ensure_ascii=False, indent=4)
             
-            log.info(f"Stashed {len(filtered)} items. Cache now has {len(existing_cache)} items.")
-            log.info("Monday/Wednesday run complete. Data saved for Friday.")
-            return # IMPORTANT: Stops here so no email is sent today
+            log.info(f"Stashed {new_items_count} new items. Cache now has {len(existing_cache)} items.")
+            log.info(f"SUCCESS: Data saved for {day_name}. Exiting to prevent email.")
+            return # <--- THIS IS THE STOP SIGN. IT PREVENTS THE REST OF MAIN()
 
-        # If today is Friday (4) or any other day not listed above, we process the email
+        # --- FRIDAY: CONSOLIDATE & CONTINUE TO EMAIL ---
         elif today == 4:
             if os.path.exists(CACHE_FILE):
                 try:
                     with open(CACHE_FILE, 'r', encoding='utf-8') as f:
                         stashed_items = json.load(f)
                     
-                    # Merge stash into today's filtered list
                     seen_titles = {item.get('title') for item in filtered}
                     for item in stashed_items:
                         if item.get('title') not in seen_titles:
                             filtered.append(item)
                     
-                    os.remove(CACHE_FILE) # Reset for next week
-                    log.info(f"Friday: Consolidated {len(filtered)} items from the week.")
+                    os.remove(CACHE_FILE) 
+                    log.info(f"Friday Consolidation: Added {len(stashed_items)} items from cache.")
                 except Exception as e:
                     log.error(f"Error loading cache: {e}")
+            else:
+                log.info("Friday run: No cache file found, processing today's news only.")
+
+        # --- TUESDAY/THURSDAY/WEEKEND: OPTIONAL ---
+        else:
+            log.info(f"Manual/Mid-week run on {day_name}. Proceeding to email without caching.")
 
         # --- Original Sorting and Emailing Logic (Now inside the Friday flow) ---
         if filtered:
