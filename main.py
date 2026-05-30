@@ -72,8 +72,8 @@ NM_MARKERS = [
 ]
 
 LLM_API_KEY = get_env("LLM_API_KEY")
-LLM_BASE_URL = get_env("LLM_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/")
-LLM_MODEL = get_env("LLM_MODEL", "gemini-1.5-flash")
+LLM_BASE_URL = get_env("LLM_BASE_URL", "https://openrouter.ai/api/v1")
+LLM_MODEL = get_env("LLM_MODEL", "anthropic/claude-sonnet-4")
 
 SMTP_HOST = get_env("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(get_env("SMTP_PORT", "587"))
