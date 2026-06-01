@@ -451,6 +451,20 @@ def send_email(content):
     except Exception as e:
         log.error(f"SMTP Error: {e}")
 
+def is_fresh(url, days=7):
+    """Returns True if the URL date is within the last X days."""
+    # Pattern to find YYYYMM/DD in GIA URLs
+    match = re.search(r'/(\d{6})/(\d{2})/', url)
+    if match:
+        date_str = match.group(1) + match.group(2) # e.g., '20251229'
+        try:
+            link_date = datetime.strptime(date_str, '%Y%m%d')
+            cutoff = datetime.now() - timedelta(days=days)
+            return link_date >= cutoff
+        except ValueError:
+            return True # If date parsing fails, keep it just in case
+    return True # Keep non-GIA links or links without date patterns
+
 # ---------------------------------------------------------------------------
 # 5. Main Execution
 # ---------------------------------------------------------------------------
@@ -515,7 +529,7 @@ def main():
                     for item in fetched_news:
                         item['source_type'] = 'news'
                         all_entries.append(item)
-                        
+        
         # 3. Processing
         def flatten(items):
             flat = []
@@ -529,6 +543,10 @@ def main():
         
         filtered = []
         for e in clean_list:
+            link_to_check = e.get('link', '') 
+            if not is_fresh(link_to_check, days=7): 
+                continue
+                
             title = str(e.get('title', ''))
             body = str(e.get('body', e.get('summary', '')))
             search_text = f"{title} {body}".lower()
