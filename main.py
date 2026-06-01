@@ -191,24 +191,41 @@ def fetch_web_headlines(url, source_name, source_type):
             if is_xml:
                 # Uses the XML parser for RSS/Bridge links to stop the warning
                 soup = BeautifulSoup(response.content, 'xml')
+                for item in soup.find_all(['item', 'entry']):
+                    title_tag = item.find('title')
+                    link_tag = item.find('link')
+                    
+                    # Handle different XML link formats
+                    href = ""
+                    if link_tag:
+                        href = link_tag.get('href') if link_tag.get('href') else link_tag.text
+                    
+                    if title_tag and href:
+                        entries.append({
+                            "title": title_tag.get_text(strip=True),
+                            "body": "",
+                            "link": urljoin(url, href.strip()),
+                            "source_type": source_type,
+                            "source_name": source_name
+                        })
             else:
-                # Uses the HTML parser for standard news sites (Wen Wei Po, Ta Kung Pao)
+                # Uses the HTML parser for standard news sites
                 soup = BeautifulSoup(response.content, 'lxml')
             
-            for link in soup.select('a[href*="/news/"], a[href*="/article/"]'):
-                title = link.get_text(strip=True)
-                raw_href = link.get('href')
+                for link in soup.select('a[href*="/news/"], a[href*="/article/"]'):
+                    title = link.get_text(strip=True)
+                    raw_href = link.get('href')
                 
-                if len(title) > 10 and raw_href:
-                    full_url = urljoin(url, raw_href.strip())
+                    if len(title) > 10 and raw_href:
+                        full_url = urljoin(url, raw_href.strip())
                     
-                    entries.append({
-                        "title": title,
-                        "body": "",
-                        "link": full_url,
-                        "source_type": source_type,
-                        "source_name": source_name
-                    })
+                        entries.append({
+                            "title": title,
+                            "body": "",
+                            "link": full_url,
+                            "source_type": source_type,
+                            "source_name": source_name
+                        })
         
         return entries[:15]
         
