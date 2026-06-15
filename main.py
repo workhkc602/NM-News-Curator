@@ -587,7 +587,7 @@ def main():
         log.info(f"Execution Day (HKT): {day_name} (Weekday index: {today})")
 
         # --- MONDAY & WEDNESDAY: STASH ONLY ---
-        if today in [2]:
+        if today in [0, 2]:
             existing_cache = []
             if os.path.exists(CACHE_FILE):
                 try:
