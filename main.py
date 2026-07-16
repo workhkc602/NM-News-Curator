@@ -493,7 +493,6 @@ def main():
         tender_targets = [
             # --- PUBLIC SECTOR ---
             ("NM Portal", "https://www.nm.gov.hk/en/tender-contracts"),
-            ("CEDD NM Projects", "https://www.cedd.gov.hk/eng/our-projects/northern-metropolis/index.html"),
             ("HKHA Business", "https://www.housingauthority.gov.hk/en/business-partnerships/tenders/index.html"),
             ("ArchSD Forecast", "https://www.archsd.gov.hk/en/newforecastconsultancies.html"),
             ("ArchSD EOI", "https://www.archsd.gov.hk/en/tenders-notices/consultancies/notices-of-invitation-for-expression-of-interest.html"),
@@ -587,7 +586,7 @@ def main():
         log.info(f"Execution Day (HKT): {day_name} (Weekday index: {today})")
 
         # --- MONDAY & WEDNESDAY: STASH ONLY ---
-        if today in [2]:
+        if today in [0, 2, 3]:
             existing_cache = []
             if os.path.exists(CACHE_FILE):
                 try:
