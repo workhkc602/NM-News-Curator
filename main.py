@@ -403,7 +403,9 @@ def summarize(entries):
             if resp.status_code != 200:
                 log.error(f"AI Error {resp.status_code}: {resp.text}")
                 if attempt < max_retries - 1:
-                    time.sleep(15)
+                    sleep_time = 20 * (2 ** attempt)  # 20s for attempt 1, 40s for attempt 2
+                    log.info(f"Rate limited or busy. Waiting {sleep_time} seconds before retry...")
+                    time.sleep(sleep_time)
                     continue
                 return f"Summarization Error: {resp.status_code}"
 
@@ -413,7 +415,7 @@ def summarize(entries):
         except Exception as e:
             log.error(f"AI Attempt {attempt + 1} failed: {e}")
             if attempt < max_retries - 1:
-                time.sleep(10)
+                time.sleep(15)
                 continue
             return f"System Error: {e}"
 
@@ -586,7 +588,7 @@ def main():
         log.info(f"Execution Day (HKT): {day_name} (Weekday index: {today})")
 
         # --- MONDAY & WEDNESDAY: STASH ONLY ---
-        if today in [0, 2, 3]:
+        if today in [2, 3]:
             existing_cache = []
             if os.path.exists(CACHE_FILE):
                 try:
