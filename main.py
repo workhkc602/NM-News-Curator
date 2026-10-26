@@ -588,7 +588,7 @@ def main():
         log.info(f"Execution Day (HKT): {day_name} (Weekday index: {today})")
 
         # --- MONDAY & WEDNESDAY: STASH ONLY ---
-        if today in [2, 3]:
+        if today in [0, 2, 3]:
             existing_cache = []
             if os.path.exists(CACHE_FILE):
                 try:
@@ -623,7 +623,6 @@ def main():
                         if item.get('title') not in seen_titles:
                             filtered.append(item)
                     
-                    os.remove(CACHE_FILE) 
                     log.info(f"Friday Consolidation: Added {len(stashed_items)} items from cache.")
                 except Exception as e:
                     log.error(f"Error loading cache: {e}")
@@ -647,6 +646,9 @@ def main():
             digest = summarize(final_selection)
             if digest and "Error" not in str(digest):
                 send_email(digest)
+                if os.path.exists(CACHE_FILE):
+                    os.remove(CACHE_FILE) 
+                    log.info("Weekly cache successfully cleared after email confirmation.")
                 log.info("Process complete: Weekly Friday email sent.")
             else:
                 log.warning("AI Summary returned nothing or an error.")
