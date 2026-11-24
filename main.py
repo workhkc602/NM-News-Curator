@@ -502,7 +502,7 @@ def main():
             ("MTRC New Projects", "https://www.mtr.com.hk/en/corporate/tenders/new_projects.html"),
             ("MTRC Operating", "https://www.mtr.com.hk/en/corporate/tenders/or.html"),
             ("MTRC Property", "https://www.mtr.com.hk/en/corporate/tenders/property_services.html"),
-            ("LandsD Tender Results", "https://www.landsd.gov.hk/en/land-tenders/tender-results.html"),
+            ("LandsD Tender Results", "https://www.landsd.gov.hk/en/resources/tender-result.html"),
             ("LandsD Press", "https://www.landsd.gov.hk/en/whats-new/news.html"),
             ("GIA Land Sale News", "https://www.info.gov.hk/gia/general/today.htm"),
 
